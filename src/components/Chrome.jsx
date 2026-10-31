@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import LogoD from './LogoD.jsx'
 import { Artwork } from './ui.jsx'
@@ -8,6 +8,7 @@ import {
   IconLibrary,
   IconPause,
   IconPlay,
+  IconMenu,
   IconSearch,
   IconSettings,
   IconVideo,
@@ -19,6 +20,26 @@ import { useInstallPrompt } from '../lib/install.js'
 /* ------------------------------------------------------------------ top bar */
 export function TopBar() {
   const navigate = useNavigate()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null)
+
+  // Close on outside click / Escape, the way a native menu behaves.
+  useEffect(() => {
+    if (!menuOpen) return undefined
+    const onDown = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) setMenuOpen(false)
+    }
+    const onKey = (event) => {
+      if (event.key === 'Escape') setMenuOpen(false)
+    }
+    document.addEventListener('pointerdown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [menuOpen])
+
   return (
     <header className="topbar">
       <div className="shell topbar-inner">
@@ -35,6 +56,25 @@ export function TopBar() {
         <button type="button" className="icon-btn" aria-label="Settings" onClick={() => navigate('/settings')}>
           <IconSettings size={19} />
         </button>
+
+        <div className="menu-wrap" ref={menuRef}>
+          <button
+            type="button"
+            className={`icon-btn ${menuOpen ? 'is-active' : ''}`}
+            aria-label="More"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            <IconMenu size={19} />
+          </button>
+          {menuOpen && (
+            <div className="menu-panel" role="menu">
+              <p className="menu-empty eyebrow">Coming soon</p>
+              <p className="menu-note">More options will land here. Nothing to configure yet.</p>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   )

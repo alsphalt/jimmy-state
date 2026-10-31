@@ -93,6 +93,12 @@ export const IconList = (p) => (
   </Svg>
 )
 
+export const IconMenu = (p) => (
+  <Svg {...p}>
+    <path d="M4 7h16M4 12h16M4 17h16" />
+  </Svg>
+)
+
 export const IconSettings = (p) => (
   <Svg {...p}>
     <circle cx="12" cy="12" r="3.2" />
