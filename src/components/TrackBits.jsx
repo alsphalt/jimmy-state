@@ -12,6 +12,7 @@ export function useTrackActions(track) {
   const { play, current, playing } = usePlayer()
   const { start, isDownloading } = useDownloads()
   const { toast } = useToast()
+  const navigate = useNavigate()
   const t = normalizeTrack(track)
 
   return {
@@ -19,7 +20,17 @@ export function useTrackActions(track) {
     saved: isFavourite(t),
     isPlaying: current?.key === t.key && playing,
     downloading: isDownloading(t.key),
-    play: () => play(t),
+    /**
+     * A YouTube result is the whole song, so playing it opens the video player instead
+     * of the 30-second preview player. Everything else uses the preview.
+     */
+    play: () => {
+      if (t.videoId) {
+        navigate(`/watch/${t.videoId}`)
+        return
+      }
+      play(t)
+    },
     favourite: () => toggleFavourite(t),
     download: () => {
       if (!t.previewUrl) {

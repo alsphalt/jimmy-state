@@ -264,16 +264,90 @@ app.post(
 /* --------------------------------------------------------------- music catalogue */
 const softLimit = rateLimit({ windowMs: 60_000, max: 90 })
 
+/**
+ * Strip the noise YouTube titles carry so a result reads like a song name.
+ * Conservative: only bracketed marketing words, and " - Topic" channels.
+ */
+function cleanYouTubeTitle(value) {
+  let out = String(value || '')
+    // bracketed marketing, e.g. "(Official Video)", "[Audio]", "(Lyrics)"
+    .replace(/\s*[([][^)\]]*(official|video|audio|lyric|visuali[sz]er|hd|4k|hq|explicit|remaster|m\/v)[^)\]]*[)\]]/gi, '')
+    .replace(/\s*[-|]\s*topic$/i, '')
+  // trailing loose markers, e.g. "... official" / "… lyrics" — only at the very end,
+  // so a real title like "Video Games" is untouched.
+  for (let i = 0; i < 3; i += 1) {
+    const next = out.replace(/[\s\-–|:]*(official( video| audio| music video)?|music video|video|audio|lyrics?|visuali[sz]er|hd|hq|4k)\s*$/i, '')
+    if (next === out) break
+    out = next
+  }
+  return out.replace(/\s{2,}/g, ' ').replace(/[\s\-–|]+$/, '').trim()
+}
+
+/** A YouTube result in the same shape the track lists already render. */
+function videoToTrack(video) {
+  return {
+    key: `yt:${video.videoId}`,
+    title: cleanYouTubeTitle(video.title) || video.title,
+    artist: cleanYouTubeTitle(video.channel) || video.channel,
+    album: '',
+    artwork: video.thumbnail,
+    durationMs: Math.round((video.durationSeconds || 0) * 1000),
+    previewUrl: '',
+    storeUrl: video.watchUrl,
+    videoId: video.videoId,
+    kind: 'youtube',
+    source: 'youtube',
+    genre: '',
+  }
+}
+
+/**
+ * Music search.
+ *
+ * With a working YouTube key this returns full songs — real durations, full-length
+ * playback. Without one it falls back to the catalogue, which only licenses 30-second
+ * previews. The response always says which source answered, so the UI never implies a
+ * preview is the whole track.
+ */
 app.get('/api/music/search', softLimit, async (req, res, next) => {
   try {
     const q = String(req.query.q || '').slice(0, 120)
     if (!q.trim()) return res.status(400).json({ ok: false, code: 'MISSING_QUERY', error: 'Enter something to search for.' })
-    // Default 30 per the API contract; the catalogue provider is asked for no more
-    // than 50 (it ignores larger values anyway).
+
+    const requested = String(req.query.source || 'auto').toLowerCase()
+    const keyProblem = youtubeKeyProblem()
+    const useYouTube = requested === 'youtube' ? !keyProblem : requested === 'itunes' ? false : !keyProblem
+
+    if (useYouTube) {
+      const limit = Math.min(Math.max(Number(req.query.limit) || 30, 1), 30)
+      const { items } = await searchVideos(q, { maxResults: limit })
+      const tracks = items.map(videoToTrack).filter((t) => t.videoId)
+      return res.json({
+        ok: true,
+        source: 'youtube',
+        full: true,
+        query: q,
+        count: tracks.length,
+        items: tracks,
+        note: 'Full-length songs from YouTube. Playback streams; no download is offered.',
+      })
+    }
+
     const limit = Math.min(Math.max(Number(req.query.limit) || 30, 1), 50)
     const country = String(req.query.country || process.env.CATALOG_COUNTRY || 'US').slice(0, 2).toUpperCase()
     const items = await searchMusic(q, { limit, country })
-    res.json({ ok: true, query: q, count: items.length, items })
+    res.json({
+      ok: true,
+      source: 'itunes',
+      full: false,
+      query: q,
+      count: items.length,
+      items,
+      code: keyProblem?.code,
+      note: keyProblem
+        ? `${keyProblem.error} Catalogue results below are 30-second previews.`
+        : 'Catalogue results: audio is a 30-second preview.',
+    })
   } catch (err) {
     next(err)
   }

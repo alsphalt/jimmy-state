@@ -33,21 +33,35 @@ export default function Search() {
     configured: true,
     fallback: false,
     notice: '',
+    source: '',
   })
   const { addSearch, searches, clearSearches, downloads, favourites, videos, identifications } = useLibrary()
 
   const run = async (query, nextMode = mode) => {
     const q = String(query || '').trim()
     if (!q) return
-    setState({ loading: true, error: null, items: [], ran: true, configured: true, fallback: false, notice: '' })
+    setState({ loading: true, error: null, items: [], ran: true, configured: true, fallback: false, notice: '', source: '' })
     try {
       let items = []
       let meta = { configured: true, fallback: false, notice: '' }
-      if (nextMode === 'music') items = (await api.searchMusic(q, 30)).items || []
+      if (nextMode === 'music') {
+        const data = await api.searchMusic(q, 30)
+        items = data.items || []
+        meta = {
+          ...meta,
+          source: data.source || 'itunes',
+          notice: data.source === 'youtube' ? 'Full-length songs · streamed from YouTube' : data.note || '',
+        }
+      }
       else if (nextMode === 'videos') {
         const data = await api.searchVideos(q, 24)
         items = data.items || []
-        meta = { configured: data.configured !== false, fallback: Boolean(data.fallback), notice: data.notice || '' }
+        meta = {
+          configured: data.configured !== false,
+          fallback: Boolean(data.fallback),
+          notice: data.notice || '',
+          source: 'youtube',
+        }
       }
       else if (nextMode === 'artists') items = (await api.artists(q)).items || []
       else if (nextMode === 'albums') {
