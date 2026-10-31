@@ -3,9 +3,9 @@ import path from 'node:path'
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { Readable } from 'node:stream'
-import 'dotenv/config'
+import dotenv from 'dotenv'
 
-import { identify, acrConfigured } from './lib/acrcloud.js'
+import { identify, acrConfigured, acrCredentialState } from './lib/acrcloud.js'
 import { buildRecognitionResults } from './lib/matches.js'
 import { searchMusic, lookupTrack, searchArtists, artistAlbums, topSongs } from './lib/itunes.js'
 import { searchVideos, relatedVideos, getVideo, youtubeConfigured } from './lib/youtube.js'
@@ -16,6 +16,51 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 const DIST = path.join(ROOT, 'dist')
 const PORT = Number(process.env.PORT || 3001)
+
+/**
+ * .env loading.
+ *
+ * dotenv with no path reads `process.cwd()/.env`, so `node server/index.js` started
+ * from anywhere other than the project root found nothing and the app reported
+ * "recognition not configured" while .env sat right there in the repo.
+ *
+ * Order: project root first, then the working directory (for unusual layouts).
+ * Real environment variables still win — a host's dashboard config is authoritative —
+ * but a variable that exists as an empty string is filled from the file, because an
+ * empty placeholder from a platform default is not a real override.
+ */
+const envCandidates = [...new Set([path.join(ROOT, '.env'), path.join(process.cwd(), '.env')])]
+const envLoaded = []
+const envParsed = {}
+for (const file of envCandidates) {
+  if (!fs.existsSync(file)) continue
+  const result = dotenv.config({ path: file })
+  if (!result.error) {
+    envLoaded.push(file)
+    Object.assign(envParsed, result.parsed || {})
+  }
+}
+let envFilledFromFile = 0
+for (const [key, value] of Object.entries(envParsed)) {
+  if (typeof process.env[key] === 'string' && process.env[key].trim() === '' && String(value).trim() !== '') {
+    process.env[key] = value
+    envFilledFromFile += 1
+  }
+}
+
+/** Show repo-relative paths for files inside the project, absolute ones outside it. */
+const displayPath = (file) => {
+  const rel = path.relative(ROOT, file)
+  return !rel || rel.startsWith('..') ? file : rel
+}
+
+const envDiagnostics = () => ({
+  loadedFiles: envLoaded.map(displayPath),
+  checked: envCandidates.map((f) => ({ path: displayPath(f), exists: fs.existsSync(f) })),
+  filledFromFile: envFilledFromFile,
+  recognition: acrCredentialState(),
+  youtube: { YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY?.trim() ? 'present' : 'missing' },
+})
 
 const app = express()
 app.disable('x-powered-by')
@@ -68,11 +113,12 @@ app.get('/api/health', (req, res) => {
       youtubeSearch: youtubeConfigured(),
       downloads: true,
     },
+    env: envDiagnostics(),
     downloadHosts: allowedHosts(),
     notes: {
       recognition: acrConfigured()
         ? 'ACRCloud identification is live.'
-        : 'Recognition disabled: set ACR_ACCESS_KEY / ACR_ACCESS_SECRET.',
+        : `Recognition disabled: no ACRCloud credentials. Checked ${envLoaded.length ? envLoaded.map(displayPath).join(', ') : 'no .env file (looked for .env in the project root)'}. Set ACR_ACCESS_KEY / ACR_ACCESS_SECRET there, or as environment variables on your host.`,
       youtube: youtubeConfigured()
         ? 'YouTube search is live.'
         : 'YouTube search disabled: set YOUTUBE_API_KEY. Playback still needs a video id, so the Videos tab stays in setup mode.',
@@ -102,11 +148,22 @@ app.post(
 
     const result = await identify(buffer)
     if (!result.ok || !result.matched) {
-      return res.status(result.ok ? 200 : 502).json({
+      const notConfigured = result.code === 'RECOGNITION_NOT_CONFIGURED'
+      return res.status(result.ok ? 200 : notConfigured ? 503 : 502).json({
         ok: false,
         matched: false,
         code: result.code || 'NO_MATCH',
-        error: result.reason || 'No match found.',
+        error: notConfigured
+          ? `No ACRCloud credentials reached the server. Checked ${
+              envLoaded.length
+                ? envLoaded.map(displayPath).join(', ')
+                : `${displayPath(path.join(ROOT, '.env'))} (not found)`
+            } and the process environment: ${Object.entries(result.credentials || {})
+              .filter(([k]) => k.startsWith('ACR_'))
+              .map(([k, v]) => `${k} ${v}`)
+              .join(', ')}. Add both values to .env at the project root, or set them in your host's environment settings, then restart.`
+          : result.reason || 'No match found.',
+        env: notConfigured ? envDiagnostics() : undefined,
         results: { exact: null, similar: [], possible: [], total: 0 },
       })
     }
@@ -417,7 +474,8 @@ app.use((err, req, res, next) => {
 
 const listener = app.listen(PORT, () => {
   console.log(`JIMMY STATE api on http://localhost:${PORT}`)
-  console.log(`  recognition : ${acrConfigured() ? 'configured' : 'NOT configured'}`)
+  console.log(`  env         : ${envLoaded.length ? envLoaded.map(displayPath).join(', ') : 'none found'}`)
+  console.log(`  recognition : ${acrConfigured() ? 'configured' : 'NOT configured — set ACR_ACCESS_KEY / ACR_ACCESS_SECRET'}`)
   console.log(`  youtube     : ${youtubeConfigured() ? 'configured' : 'NOT configured'}`)
 })
 

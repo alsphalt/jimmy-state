@@ -10,6 +10,7 @@
 import { spawn } from 'node:child_process'
 import { setTimeout as sleep } from 'node:timers/promises'
 import path from 'node:path'
+import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -100,7 +101,25 @@ try {
   const health = await json('/api/health')
   check('GET /api/health returns ok', health.res.status === 200 && health.body?.ok === true)
   check('health reports capability flags', typeof health.body?.capabilities?.musicRecognition === 'boolean')
-  check('health never leaks secrets', !JSON.stringify(health.body).toLowerCase().includes('secret'))
+  // Compare against the real values in .env: key NAMES may appear (ACR_ACCESS_SECRET),
+  // key VALUES must never do so.
+  const envText = fs.existsSync(path.join(ROOT, '.env')) ? fs.readFileSync(path.join(ROOT, '.env'), 'utf8') : ''
+  const secrets = envText
+    .split('\n')
+    .filter((line) => /^(ACR_ACCESS_KEY|ACR_ACCESS_SECRET|YOUTUBE_API_KEY)=/.test(line))
+    .map((line) => line.split('=').slice(1).join('=').trim())
+    .filter((value) => value.length >= 8)
+  const healthJson = JSON.stringify(health.body)
+  check(
+    'health never leaks credential values',
+    secrets.every((value) => !healthJson.includes(value)),
+    `${secrets.length} credential value(s) checked`,
+  )
+  check(
+    'health reports credential state without values',
+    typeof health.body?.env?.recognition?.ACR_ACCESS_KEY === 'string' &&
+      ['present', 'empty', 'missing'].includes(health.body.env.recognition.ACR_ACCESS_KEY),
+  )
 
   const index = await fetch(`${BASE}/`)
   const html = await index.text()

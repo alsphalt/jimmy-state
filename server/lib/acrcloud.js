@@ -12,14 +12,35 @@ import crypto from 'node:crypto'
 
 const DEFAULT_HOST = 'identify-ap-southeast-1.acrcloud.com'
 
-export const ACR = {
-  host: process.env.ACR_HOST || DEFAULT_HOST,
-  key: process.env.ACR_ACCESS_KEY || '',
-  secret: process.env.ACR_ACCESS_SECRET || '',
+/**
+ * Read the environment at call time, not at import time.
+ *
+ * Import-time capture meant any .env loaded after this module was imported (or any
+ * variable set later by a host's runtime) was silently ignored — the app reported
+ * "not configured" even though the credentials existed.
+ */
+export function acrConfig() {
+  return {
+    host: process.env.ACR_HOST || DEFAULT_HOST,
+    key: (process.env.ACR_ACCESS_KEY || '').trim(),
+    secret: (process.env.ACR_ACCESS_SECRET || '').trim(),
+  }
 }
 
 export function acrConfigured() {
-  return Boolean(ACR.key && ACR.secret && ACR.host)
+  const cfg = acrConfig()
+  return Boolean(cfg.key && cfg.secret && cfg.host)
+}
+
+/** Shape-only view for diagnostics: never the values themselves. */
+export function acrCredentialState() {
+  const state = (value) => (!value ? 'missing' : String(value).trim() === '' ? 'empty' : 'present')
+  return {
+    ACR_HOST: state(process.env.ACR_HOST),
+    ACR_ACCESS_KEY: state(process.env.ACR_ACCESS_KEY),
+    ACR_ACCESS_SECRET: state(process.env.ACR_ACCESS_SECRET),
+    configured: acrConfigured(),
+  }
 }
 
 export function signAcr(accessKey, accessSecret, timestamp = Math.floor(Date.now() / 1000)) {
@@ -48,13 +69,15 @@ export async function identify(buffer) {
   const check = inspectAudio(buffer)
   if (!check.ok) return { ok: false, matched: false, reason: check.reason, matches: [] }
 
-  if (!acrConfigured()) {
+  const cfg = acrConfig()
+  if (!cfg.key || !cfg.secret) {
     return {
       ok: false,
       matched: false,
       code: 'RECOGNITION_NOT_CONFIGURED',
       reason:
         'Music recognition is not configured on this server. Add ACR_ACCESS_KEY and ACR_ACCESS_SECRET to .env, then restart.',
+      credentials: acrCredentialState(),
       matches: [],
     }
   }
@@ -63,17 +86,17 @@ export async function identify(buffer) {
   const form = new FormData()
   form.append('sample', new Blob([buffer], { type: 'audio/wav' }), 'sample.wav')
   form.append('sample_bytes', String(buffer.length))
-  form.append('access_key', ACR.key)
+  form.append('access_key', cfg.key)
   form.append('data_type', 'audio')
   form.append('signature_version', '1')
   form.append('timestamp', String(timestamp))
-  form.append('signature', signAcr(ACR.key, ACR.secret, timestamp))
+  form.append('signature', signAcr(cfg.key, cfg.secret, timestamp))
 
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), 20000)
   let res, body
   try {
-    res = await fetch(`https://${ACR.host}/v1/identify`, {
+    res = await fetch(`https://${cfg.host}/v1/identify`, {
       method: 'POST',
       body: form,
       signal: controller.signal,

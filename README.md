@@ -115,6 +115,27 @@ ACRCloud needs a host + key + **secret** (it signs requests), so it is not a sin
 `MUSIC_RECOGNITION_API_KEY`. The YouTube key keeps the `YOUTUBE_API_KEY` name from your
 brief. Both stay server-side; no key is ever sent to the browser.
 
+`.env` is read from the **project root**, whatever directory the server was started from,
+and real environment variables (a host's dashboard) win over the file. `.env` is
+gitignored, so a fresh clone needs `cp .env.example .env` — a deployed copy will not have
+it, and must get the variables from the platform instead.
+
+If credentials are ever missing, `/api/health` says exactly what was checked and what it
+found, without printing values:
+
+```json
+"env": {
+  "loadedFiles": [".env"],
+  "checked": [{ "path": ".env", "exists": true }],
+  "recognition": { "ACR_HOST": "present", "ACR_ACCESS_KEY": "present",
+                   "ACR_ACCESS_SECRET": "present", "configured": true },
+  "youtube": { "YOUTUBE_API_KEY": "missing" }
+}
+```
+
+`missing` means the variable is absent, `empty` means it exists but is blank — those are
+different problems, and the server log plus the recognition error both name them.
+
 ### Getting the credentials
 
 **ACRCloud** — <https://console.acrcloud.com> → create a project → *Identification* →
