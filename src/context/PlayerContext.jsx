@@ -60,7 +60,9 @@ export function PlayerProvider({ children }) {
       audio.removeEventListener('error', onError)
       audio.removeEventListener('play', onPlay)
       audio.removeEventListener('pause', onPause)
-      audio.src = ''
+      // '' resolves to the page URL and fires a bogus media error; drop the attribute.
+      audio.removeAttribute('src')
+      audio.load()
     }
   }, [])
 
@@ -140,7 +142,8 @@ export function PlayerProvider({ children }) {
     const audio = audioRef.current
     if (audio) {
       audio.pause()
-      audio.src = ''
+      audio.removeAttribute('src')
+      audio.load()
     }
     setCurrent(null)
     setPlaying(false)
