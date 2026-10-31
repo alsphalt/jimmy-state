@@ -477,7 +477,12 @@ function youTubeContext(req) {
   if (envRef) return { referer: envRef }
   const host = req.get('host') || ''
   if (!host) return { referer: '' }
-  return { referer: `${req.protocol}://${host}` }
+  // Behind Vercel the request is terminated at the edge, so req.protocol can read
+  // "http" while the browser is on https. The referrer allowlist is scheme-sensitive,
+  // so anything non-local is treated as https.
+  const local = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i.test(host)
+  const scheme = local ? req.protocol : 'https'
+  return { referer: `${scheme}://${host}` }
 }
 
 function youtubeKeyProblem() {

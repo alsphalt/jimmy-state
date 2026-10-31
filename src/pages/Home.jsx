@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Artwork, EmptyState, Section } from '../components/ui.jsx'
-import { TrackTile } from '../components/TrackBits.jsx'
+import { TrackTile, useTrackActions } from '../components/TrackBits.jsx'
 import {
   IconChevron,
   IconDownload,
@@ -24,6 +24,26 @@ const STATUS_LABEL = {
   queued: 'Queued',
   resolving: 'Checking',
   saving: 'Writing',
+}
+
+function TrendingFirst({ track }) {
+  const a = useTrackActions(track)
+  if (!track) return null
+  return (
+    <button type="button" className="trending-first" onClick={a.play} aria-label={`Play ${track.title}`}>
+      <Artwork src={track.artworkSmall || track.artwork} alt="" style={{ width: 74, height: 74, borderRadius: 16 }} />
+      <div className="grow" style={{ textAlign: 'left', minWidth: 0 }}>
+        <span className="trending-label">Trending now · #1</span>
+        <strong className="truncate" style={{ display: 'block', fontSize: 15, marginTop: 2 }}>
+          {track.title}
+        </strong>
+        <span className="tiny mute truncate" style={{ display: 'block' }}>
+          {track.artist}
+        </span>
+      </div>
+      <span className="trending-play">{a.isPlaying ? <IconPause size={18} /> : <IconPlay size={18} />}</span>
+    </button>
+  )
 }
 
 export default function Home() {
@@ -189,11 +209,15 @@ export default function Home() {
         ) : charts.items.length === 0 ? (
           <EmptyState title="No chart data available" />
         ) : (
-          <div className="hscroll">
-            {charts.items.map((t) => (
-              <TrackTile key={t.id} track={t} showRank />
-            ))}
-          </div>
+          <>
+            {/* The chart's number one, given the space it deserves. */}
+            <TrendingFirst track={charts.items[0]} />
+            <div className="hscroll">
+              {charts.items.slice(1).map((t) => (
+                <TrackTile key={t.id} track={t} showRank />
+              ))}
+            </div>
+          </>
         )}
       </Section>
 

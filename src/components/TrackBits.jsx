@@ -109,7 +109,7 @@ export function TrackRow({ track, subtitle, trailing, showDownload = true, onRem
         type="button"
         className="track-row-meta"
         style={{ background: 'none', textAlign: 'left' }}
-        onClick={() => navigate(`/song/${encodeURIComponent(a.track.key)}`, { state: { track: a.track } })}
+        onClick={a.play}
       >
         <div className="track-row-title truncate">{a.track.title}</div>
         <div className="track-row-sub truncate">
@@ -118,6 +118,14 @@ export function TrackRow({ track, subtitle, trailing, showDownload = true, onRem
         </div>
       </button>
       <div className="track-row-actions">
+        <button
+          type="button"
+          className="icon-btn ghost"
+          aria-label={`Open details for ${a.track.title}`}
+          onClick={() => navigate(`/song/${encodeURIComponent(a.track.key)}`, { state: { track: a.track } })}
+        >
+          <IconChevron size={16} />
+        </button>
         {trailing}
         {showDownload && a.track.previewUrl && (
           <button
