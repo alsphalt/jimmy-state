@@ -205,8 +205,21 @@ export function PlayerBar() {
       <button type="button" className="player-meta" onClick={toggle} style={{ textAlign: 'left', background: 'none' }}>
         <strong className="truncate">{current.title}</strong>
         <span className="truncate">{error || current.artist}</span>
-        <span className="player-preview-tag">30s preview</span>
+        <span className="player-preview-tag">Preview</span>
       </button>
+      {current.storeUrl ? (
+        <a
+          className="icon-btn"
+          href={current.storeUrl}
+          target="_blank"
+          rel="noreferrer noopener"
+          aria-label="Hear the full song"
+          title="Hear the full song"
+          style={{ fontSize: 15, fontWeight: 700 }}
+        >
+          ↗
+        </a>
+      ) : null}
       <button type="button" className="icon-btn" onClick={toggle} aria-label={playing ? 'Pause preview' : 'Play preview'}>
         {playing ? <IconPause size={20} /> : <IconPlay size={20} />}
       </button>

@@ -211,7 +211,7 @@ export default function Discover() {
       <div className="card card-pad" style={{ marginTop: 26 }}>
         <span className="eyebrow">How this works</span>
         <p className="tiny muted" style={{ marginTop: 6 }}>
-          Charts come from Apple’s public marketing feed; artwork and 30-second previews come from the iTunes Search
+          Charts come from Apple’s public marketing feed; artwork and preview clips come from the iTunes Search
           API. Both are queried by this app’s server, so no keys reach your browser. Preview clips are the only audio
           available for download.
         </p>

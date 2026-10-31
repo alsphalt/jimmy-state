@@ -155,9 +155,20 @@ export default function SongDetails() {
       </div>
 
       <div className="row gap-8 wrap" style={{ marginTop: 14 }}>
-        <button type="button" className="btn btn-primary" onClick={a.play} disabled={!a.track.previewUrl}>
+        {a.track.storeUrl ? (
+          <a
+            className="btn btn-primary"
+            href={a.track.storeUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+            title="Open the full song in the provider"
+          >
+            <IconExternal size={16} /> Hear full song
+          </a>
+        ) : null}
+        <button type="button" className="btn" onClick={a.play} disabled={!a.track.previewUrl}>
           {a.isPlaying ? <IconPause size={16} /> : <IconPlay size={16} />}
-          {a.track.previewUrl ? (a.isPlaying ? 'Pause preview' : 'Play 30s preview') : 'No preview'}
+          {a.track.previewUrl ? (a.isPlaying ? 'Pause preview' : 'Play preview') : 'No preview'}
         </button>
         <button
           type="button"
@@ -265,7 +276,7 @@ export default function SongDetails() {
           </div>
           <div className="kv">
             <span>Preview</span>
-            <b>{a.track.previewUrl ? '30-second clip' : 'Not published'}</b>
+            <b>{a.track.previewUrl ? 'Preview clip' : 'Not published'}</b>
           </div>
           <div className="kv">
             <span>ISRC</span>
@@ -348,9 +359,9 @@ export default function SongDetails() {
       <div className="notice notice-info" style={{ marginTop: 16 }}>
         <IconShield size={16} style={{ flex: 'none', marginTop: 1 }} />
         <div>
-          <strong>Preview vs full track.</strong> The catalogue licenses a 30-second clip, so in-app audio is that clip
-          even though the duration above is the real length. <b>Play full</b> opens the official YouTube upload, which
-          streams the whole track (or a two-hour mix) without downloading anything.
+          <strong>Length vs clip.</strong> The duration above is the song&rsquo;s real length. In-app audio from the
+          catalogue is a short licensed clip, so <b>Hear full song</b> opens the whole track in its provider, and
+          <b> Play full</b> streams the official YouTube upload — a two-hour mix included — without downloading it.
         </div>
       </div>
 
