@@ -235,7 +235,34 @@ messages rather than silent success.
 4. Reverse proxies should forward `X-Forwarded-For` (the app trusts one proxy hop for
    rate limiting) and must not strip `Content-Type` on POSTs.
 
-## 12. Known limitations
+## 12. Dev server behind a tunnel or hosted sandbox
+
+If you open the Vite dev server through a proxy domain, Vite's DNS-rebinding guard blocks
+it with **“Blocked request. This host (…) is not allowed.”** — the server is fine, it just
+refuses an unfamiliar `Host` header.
+
+`vite.config.js` allows `sb-78xhxljtwtq7.vercel.run`, `.vercel.run` and `.vercel.app`, and
+you can add more without editing the file:
+
+```bash
+ALLOWED_HOSTS="my-tunnel.example.com,staging.example.org" npm run dev
+```
+
+Do **not** set `allowedHosts: true` — that disables the protection instead of extending it.
+If the console then complains about the HMR websocket, the tunnel is https on 443:
+
+```bash
+VITE_HMR_WSS=1 npm run dev      # VITE_HMR_PORT=443 is the default
+```
+
+`npm run dev` starts the API on `:3001` and the app on `:5173`; the app proxies `/api` to
+the API. If you see `EADDRINUSE`, a stale server is still holding the port:
+
+```bash
+ps -eo pid,args | grep "[s]erver/index.js"
+```
+
+## 13. Known limitations
 
 - Recognition requires network access and a configured ACRCloud project; without it the
   app says so instead of pretending.

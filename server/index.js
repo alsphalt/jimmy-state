@@ -415,10 +415,21 @@ app.use((err, req, res, next) => {
   })
 })
 
-app.listen(PORT, () => {
+const listener = app.listen(PORT, () => {
   console.log(`JIMMY STATE api on http://localhost:${PORT}`)
   console.log(`  recognition : ${acrConfigured() ? 'configured' : 'NOT configured'}`)
   console.log(`  youtube     : ${youtubeConfigured() ? 'configured' : 'NOT configured'}`)
+})
+
+listener.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(
+      `[jimmy-state] port ${PORT} is already in use — another copy of the API is probably running.\n` +
+        `Stop it (ps -eo pid,args | grep "[s]erver/index.js") or start this one with PORT=3002.`,
+    )
+    process.exit(1)
+  }
+  throw err
 })
 
 export default app
