@@ -212,4 +212,58 @@ export async function topSongs({ limit = 20, country = 'us' } = {}) {
   return list
 }
 
+/**
+ * Music videos (entity=musicVideo). Keyless and official, and each result carries a
+ * provider-published .m4v preview — real playback without a YouTube key, and the only
+ * video files this app is allowed to save.
+ */
+export function normaliseMusicVideo(item) {
+  if (!item || !item.trackId) return null
+  return {
+    videoId: `mv-${item.trackId}`,
+    trackId: item.trackId,
+    title: item.trackName || 'Untitled video',
+    channel: item.artistName || '',
+    thumbnail: bigArtwork(item.artworkUrl100 || '', 600),
+    thumbnailSmall: bigArtwork(item.artworkUrl100 || '', 300),
+    durationSeconds: Math.round(Number(item.trackTimeMillis || 0) / 1000),
+    previewUrl: item.previewUrl || '',
+    storeUrl: item.trackViewUrl || '',
+    genre: item.primaryGenreName || '',
+    releaseDate: item.releaseDate || '',
+    kind: 'music-video',
+    source: 'itunes',
+    embeddable: true,
+    watchUrl: item.trackViewUrl || '',
+  }
+}
+
+export async function searchMusicVideos(term, { limit = 20, country = 'US' } = {}) {
+  const q = String(term || '').trim()
+  if (!q) return []
+  const key = `mv:${q.toLowerCase()}:${limit}:${country}`
+  const cached = cacheGet(key)
+  if (cached) return cached
+  const url = `${BASE}/search?term=${encodeURIComponent(q)}&media=music&entity=musicVideo&limit=${Math.min(
+    Math.max(limit, 1),
+    50,
+  )}&country=${encodeURIComponent(country)}`
+  const data = await getJson(url)
+  const list = (data?.results || []).map(normaliseMusicVideo).filter(Boolean)
+  cacheSet(key, list)
+  return list
+}
+
+export async function lookupMusicVideo(trackId, country = 'US') {
+  const id = String(trackId || '').replace(/\D/g, '')
+  if (!id) return null
+  const key = `mvl:${id}:${country}`
+  const cached = cacheGet(key)
+  if (cached !== null) return cached
+  const data = await getJson(`${BASE}/lookup?id=${id}&country=${encodeURIComponent(country)}`)
+  const video = (data?.results || []).map(normaliseMusicVideo).filter(Boolean)[0] || null
+  cacheSet(key, video)
+  return video
+}
+
 export const _internal = { bigArtwork, cacheSize: () => cache.size }

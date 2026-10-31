@@ -7,9 +7,17 @@ import dotenv from 'dotenv'
 
 import { identify, acrConfigured, acrCredentialState } from './lib/acrcloud.js'
 import { buildRecognitionResults } from './lib/matches.js'
-import { searchMusic, lookupTrack, searchArtists, artistAlbums, topSongs } from './lib/itunes.js'
+import {
+  searchMusic,
+  lookupTrack,
+  searchArtists,
+  artistAlbums,
+  topSongs,
+  searchMusicVideos,
+  lookupMusicVideo,
+} from './lib/itunes.js'
 import { lookupMetadata, metadataConfigured } from './lib/acrMetadata.js'
-import { searchVideos, relatedVideos, getVideo, youtubeConfigured } from './lib/youtube.js'
+import { searchVideos, relatedVideos, getVideo, youtubeConfigured, oembed } from './lib/youtube.js'
 import { assertDownloadable, sanitiseFileName, isMediaType, extensionFor, allowedHosts } from './lib/netguard.js'
 import { rateLimit } from './lib/rateLimit.js'
 
@@ -113,6 +121,7 @@ app.get('/api/health', (req, res) => {
       musicCatalogue: true,
       youtubeSearch: youtubeConfigured(),
       metadataLinks: metadataConfigured(),
+      catalogVideos: true,
       downloads: true,
     },
     env: envDiagnostics(),
@@ -309,6 +318,33 @@ app.get('/api/metadata/track', softLimit, async (req, res, next) => {
 })
 
 /* ------------------------------------------------------------------------ video */
+/**
+ * Catalogue music videos — keyless. Apple publishes a real .m4v preview per video,
+ * which is what makes the Videos tab usable before a YouTube key exists.
+ */
+app.get('/api/videos/catalog', softLimit, async (req, res, next) => {
+  try {
+    const q = String(req.query.q || '').slice(0, 120)
+    if (!q.trim()) return res.status(400).json({ ok: false, code: 'MISSING_QUERY', error: 'Enter a video title or artist.' })
+    const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 40)
+    const country = String(req.query.country || process.env.CATALOG_COUNTRY || 'US').slice(0, 2).toUpperCase()
+    const items = await searchMusicVideos(q, { limit, country })
+    res.json({ ok: true, source: 'itunes', query: q, count: items.length, items })
+  } catch (err) {
+    next(err)
+  }
+})
+
+app.get('/api/videos/catalog/:id', softLimit, async (req, res, next) => {
+  try {
+    const video = await lookupMusicVideo(req.params.id)
+    if (!video) return res.status(404).json({ ok: false, code: 'VIDEO_NOT_FOUND', error: 'That music video is not in the catalogue.' })
+    res.json({ ok: true, video })
+  } catch (err) {
+    next(err)
+  }
+})
+
 app.get('/api/videos/search', softLimit, async (req, res, next) => {
   try {
     const q = String(req.query.q || '').slice(0, 120)
@@ -343,10 +379,14 @@ app.get('/api/videos/:id(\\w[\\w-]{10})/related', softLimit, async (req, res, ne
 app.get('/api/videos/:id(\\w[\\w-]{10})', softLimit, async (req, res, next) => {
   try {
     if (!youtubeConfigured()) {
+      // No key: YouTube's public oEmbed endpoint still gives title/channel/thumbnail.
+      const partial = await oembed(req.params.id)
+      if (partial) return res.json({ ok: true, video: partial, configured: false, partial: true })
       return res.status(503).json({
         ok: false,
         code: 'YOUTUBE_NOT_CONFIGURED',
-        error: 'Video metadata needs YOUTUBE_API_KEY. Playback of a known video id still works through the embedded player.',
+        error:
+          'Video metadata needs YOUTUBE_API_KEY. Playback of a valid video id still works through the embedded player.',
       })
     }
     const video = await getVideo(req.params.id)

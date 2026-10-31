@@ -22,6 +22,7 @@ const ROUTES = [
   '/identify',
   '/videos',
   '/watch/dQw4w9WgXcQ',
+  '/watch/mv-1440933517',
   '/library',
   '/library?tab=favourites',
   '/library?tab=downloads',

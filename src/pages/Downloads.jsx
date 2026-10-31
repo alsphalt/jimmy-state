@@ -57,15 +57,6 @@ export default function Downloads() {
       toast('Insecure link', { message: 'Only https:// sources can be saved.', type: 'err' })
       return
     }
-    if (kind === 'video') {
-      toast('Video downloads are limited', {
-        message:
-          'No video host is on the authorized list, so this file cannot be saved. Audio previews from the catalogue work.',
-        type: 'err',
-        ttl: 6000,
-      })
-      return
-    }
     const base = decodeURIComponent(parsed.pathname.split('/').pop() || 'authorized-media')
       .replace(/\.[a-z0-9]{2,4}$/i, '')
       .slice(0, 80)
@@ -108,9 +99,9 @@ export default function Downloads() {
       <div className="notice notice-info" style={{ marginTop: 14 }}>
         <IconCheck size={16} style={{ flex: 'none', marginTop: 1 }} />
         <div>
-          <strong>What can be downloaded.</strong> Catalogue preview clips (M4A, published by Apple for preview use) and
-          files from hosts on the server’s authorized list. YouTube videos cannot be downloaded here — the embedded
-          player only streams them.
+          <strong>What can be downloaded.</strong> Catalogue preview clips — audio (M4A) and music videos (M4V), both
+          published by Apple for preview use — plus files from hosts on the server’s authorized list. YouTube videos
+          cannot be downloaded here; the embedded player only streams them.
         </div>
       </div>
 
@@ -254,6 +245,10 @@ export default function Downloads() {
           </li>
           <li>
             <b>Desktop Chrome / Edge:</b> a save dialog lets you choose the exact folder and filename.
+          </li>
+          <li>
+            <b>Video:</b> catalogue music-video previews (<code>video-ssl.itunes.apple.com</code>) can be saved as MP4/
+            M4V. A YouTube link is refused by the server — that is the policy, not a bug.
           </li>
           <li>
             <b>iOS Safari:</b> the file lands in Files → Downloads and can be moved from there.

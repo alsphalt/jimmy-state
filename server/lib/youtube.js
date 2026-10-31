@@ -143,4 +143,43 @@ export async function getVideo(videoId) {
   return hydrated
 }
 
-export const _internal = { mapSnippet }
+/**
+ * oEmbed — YouTube's own public endpoint. No key, no scraping: given a video id it
+ * returns the title, channel and thumbnail. Used when YOUTUBE_API_KEY is absent so a
+ * pasted link still resolves to real metadata instead of "not configured".
+ */
+export async function oembed(videoId) {
+  const id = String(videoId || '').trim()
+  if (!/^[A-Za-z0-9_-]{11}$/.test(id)) return null
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 6000)
+  try {
+    const res = await fetch(
+      `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${id}`)}&format=json`,
+      { signal: controller.signal, headers: { 'User-Agent': 'JimmyState/1.0' } },
+    )
+    if (!res.ok) return null
+    const data = await res.json()
+    return {
+      videoId: id,
+      title: data.title || 'Untitled video',
+      channel: data.author_name || '',
+      channelId: '',
+      description: '',
+      publishedAt: '',
+      thumbnail: data.thumbnail_url || `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+      durationSeconds: 0,
+      views: null,
+      embeddable: true,
+      watchUrl: `https://www.youtube.com/watch?v=${id}`,
+      source: 'youtube-oembed',
+      partial: true,
+    }
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+export const _internal = { mapSnippet, oembed }

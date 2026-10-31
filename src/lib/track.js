@@ -59,6 +59,10 @@ export function normalizeVideo(raw) {
     publishedAt: raw.publishedAt || '',
     embeddable: raw.embeddable !== false,
     watchUrl: raw.watchUrl || `https://www.youtube.com/watch?v=${raw.videoId}`,
-    source: 'youtube',
+    previewUrl: raw.previewUrl || '',
+    storeUrl: raw.storeUrl || '',
+    kind: raw.kind || 'youtube',
+    genre: raw.genre || '',
+    source: raw.source || 'youtube',
   }
 }

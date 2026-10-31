@@ -160,6 +160,35 @@ try {
   )
   check('no fabricated video payload when unconfigured', videos.res.status !== 503 || videos.body.items === undefined)
 
+  console.log('\ncatalogue videos (keyless)')
+  const catalog = await json('/api/videos/catalog?q=amapiano&limit=3')
+  check('catalogue video search works without any key', catalog.res.ok && catalog.body.items.length > 0, `status ${catalog.res.status}`)
+  const firstVideo = catalog.body.items?.[0]
+  check('video results carry a playable preview', Boolean(firstVideo?.previewUrl?.startsWith('https://video-ssl.itunes.apple.com')))
+  check('video results carry artwork and duration', Boolean(firstVideo?.thumbnail?.startsWith('https://')) && firstVideo?.durationSeconds > 0)
+  check('catalogue ids are distinct from YouTube ids', /^mv-\d+$/.test(firstVideo?.videoId || ''), firstVideo?.videoId)
+  if (firstVideo?.videoId) {
+    const one = await json(`/api/videos/catalog/${firstVideo.videoId.replace('mv-', '')}`)
+    check('catalogue video lookup by id works', one.res.ok && one.body.video.videoId === firstVideo.videoId)
+    const resolvedVideo = await json('/api/downloads/resolve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: firstVideo.previewUrl, fileName: 'Music Video' }),
+    })
+    check('music-video preview is an authorized download', resolvedVideo.res.ok && String(resolvedVideo.body.contentType).startsWith('video/'), resolvedVideo.body?.error)
+    check('video download reports a video format', ['mp4', 'm4v', 'mov'].includes(resolvedVideo.body?.format), resolvedVideo.body?.format)
+  }
+  check('catalogue video search validates input', (await json('/api/videos/catalog?q=')).res.status === 400)
+
+  console.log('\nyoutube without a key')
+  const oembedRes = await json('/api/videos/dQw4w9WgXcQ')
+  if (oembedRes.res.status === 200 && oembedRes.body.partial) {
+    check('oEmbed resolves a video without an API key', Boolean(oembedRes.body.video?.title), oembedRes.body.video?.title)
+    check('oEmbed result is marked partial', oembedRes.body.video.partial === true)
+  } else {
+    skip('oEmbed metadata fallback', `status ${oembedRes.res.status}`)
+  }
+
   console.log('\ndownload policy')
   const foreign = await json('/api/downloads/resolve', {
     method: 'POST',

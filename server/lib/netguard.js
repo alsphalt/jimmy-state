@@ -10,7 +10,12 @@ import net from 'node:net'
  * DOWNLOAD_ALLOWED_HOSTS). There is no YouTube path, no stream extraction and no
  * DRM handling anywhere in this application.
  */
-const DEFAULT_HOSTS = ['audio-ssl.itunes.apple.com', 'itunes.apple.com', 'mzstatic.com']
+const DEFAULT_HOSTS = [
+  'audio-ssl.itunes.apple.com',
+  'video-ssl.itunes.apple.com',
+  'itunes.apple.com',
+  'mzstatic.com',
+]
 
 export function allowedHosts() {
   const extra = String(process.env.DOWNLOAD_ALLOWED_HOSTS || '')
@@ -106,6 +111,8 @@ const EXT_BY_TYPE = {
   'audio/ogg': 'ogg',
   'audio/webm': 'webm',
   'video/mp4': 'mp4',
+  'video/x-m4v': 'm4v',
+  'video/quicktime': 'mov',
   'video/webm': 'webm',
 }
 

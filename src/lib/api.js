@@ -45,6 +45,10 @@ export const api = {
   albums: (artistId) => request(`/api/music/albums/${encodeURIComponent(artistId)}`),
   charts: (limit = 20) => request(`/api/music/charts?limit=${limit}`),
 
+  catalogVideos: (q, limit = 24) =>
+    request(`/api/videos/catalog?q=${encodeURIComponent(q)}&limit=${limit}`),
+  catalogVideo: (id) => request(`/api/videos/catalog/${encodeURIComponent(id)}`),
+
   searchVideos: (q, limit = 20) =>
     request(`/api/videos/search?q=${encodeURIComponent(q)}&limit=${limit}`),
   video: (id) => request(`/api/videos/${encodeURIComponent(id)}`),

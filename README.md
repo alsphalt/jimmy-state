@@ -30,8 +30,10 @@ npm start                # single server on :3001 serving dist/ + the API
 | Artwork, 30s previews, similar songs | **iTunes Search API** (no key) | Live |
 | Charts / trending | **Apple Music** marketing feed, legacy iTunes RSS fallback | Live |
 | Platform links, hi-res covers, composer credits | **ACRCloud External Metadata** (ISRC lookup) | Needs `ACR_METADATA_TOKEN`; degrades to no links |
-| Video search | **YouTube Data API v3** | Needs `YOUTUBE_API_KEY`; otherwise the UI shows setup instructions |
-| Video playback | **YouTube IFrame Player API** | Works with a video id, no key required |
+| Music-video search + playback | **iTunes** `entity=musicVideo` | Live, **no key** — each result has a real `.m4v` preview |
+| Video search | **YouTube Data API v3** | Needs `YOUTUBE_API_KEY`; keyless fallback is oEmbed for known ids |
+| Video playback | **YouTube IFrame Player API** / native `<video>` | Works with a video id, no key required |
+| Link metadata | **YouTube oEmbed** | Keyless title/channel/thumbnail for a pasted link |
 | Downloads | Authorized hosts only (Apple preview clips by default) | Live |
 | Library, playlists, history | IndexedDB (localStorage fallback) | Live, offline-capable |
 | Install banner / PWA | `beforeinstallprompt`, `appinstalled`, manifest, service worker | Live over HTTPS |
@@ -78,7 +80,7 @@ Guards:
 
 - https only, no credentials in the URL, no non-standard ports, no IP literals
 - host must be on `DOWNLOAD_ALLOWED_HOSTS` (default: `audio-ssl.itunes.apple.com`,
-  `itunes.apple.com`, `mzstatic.com`)
+  `video-ssl.itunes.apple.com`, `itunes.apple.com`, `mzstatic.com`)
 - DNS is resolved and private/loopback ranges are rejected
 - response must be `audio/*` or `video/*`, under `MAX_DOWNLOAD_BYTES` (60 MB)
 - the proxy refuses any URL that fails the same checks, so it cannot be used as an open relay
@@ -172,6 +174,8 @@ search shows setup steps, and library/playlists/downloads keep working.
 | GET | `/api/music/albums/:artistId` | albums for an artist |
 | GET | `/api/music/charts?limit=&country=` | real chart data, with fallback source |
 | GET | `/api/metadata/track?isrc=` \| `?q=&artist=` | platform links, covers, credits; 503 without a token |
+| GET | `/api/videos/catalog?q=` | keyless music videos (Apple previews) |
+| GET | `/api/videos/catalog/:id` | one catalogue video |
 | GET | `/api/videos/search?q=` | 503 + `YOUTUBE_NOT_CONFIGURED` when no key |
 | GET | `/api/videos/:id` · `/api/videos/:id/related` | metadata / related |
 | POST | `/api/downloads/resolve` | validate a source, return size/format/stream URL |
@@ -239,7 +243,7 @@ so recognition never answers with a stale match; the UI shows an offline notice 
 ## 10. Tests
 
 ```bash
-npm test                 # API suite (52 checks) — spawns the server on a random port
+npm test                 # API suite (62 checks) — spawns the server on a random port
 node tests/ssr-smoke.mjs # renders all 18 routes server-side and asserts the shell
 ```
 
@@ -299,7 +303,10 @@ ps -eo pid,args | grep "[s]erver/index.js"
   app says so instead of pretending.
 - Previews are 30-second clips. Full-track streaming is not implemented and is not
   claimed anywhere in the UI.
-- Video search needs a YouTube key; playback of a known id works without one.
+- YouTube *keyword* search needs a key; catalogue music videos, playback of a known id
+  and title resolution via oEmbed all work without one.
+- No YouTube extraction, by design: `ytdl-core`, `yt-search` scraping and similar are not
+  used. The only video files that can be saved are provider-published previews.
 - On Android the page cannot choose the Downloads folder — the browser download manager
   does. A native wrapper would be required for arbitrary folder access.
 - Video downloads have no authorized host by default, so the UI explains the limit
