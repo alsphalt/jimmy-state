@@ -268,7 +268,9 @@ app.get('/api/music/search', softLimit, async (req, res, next) => {
   try {
     const q = String(req.query.q || '').slice(0, 120)
     if (!q.trim()) return res.status(400).json({ ok: false, code: 'MISSING_QUERY', error: 'Enter something to search for.' })
-    const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 50)
+    // Default 30 per the API contract; the catalogue provider is asked for no more
+    // than 50 (it ignores larger values anyway).
+    const limit = Math.min(Math.max(Number(req.query.limit) || 30, 1), 50)
     const country = String(req.query.country || process.env.CATALOG_COUNTRY || 'US').slice(0, 2).toUpperCase()
     const items = await searchMusic(q, { limit, country })
     res.json({ ok: true, query: q, count: items.length, items })

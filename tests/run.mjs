@@ -402,7 +402,7 @@ try {
   console.log('\nserverless entry (Vercel shape)')
   const simPort = 3700 + Math.floor(Math.random() * 200)
   const simCode = `
-    const mod = await import(${JSON.stringify(path.join(ROOT, 'api', '[...route].js'))})
+    const mod = await import(${JSON.stringify(path.join(ROOT, 'api', 'music', 'search.js'))})
     const http = await import('node:http')
     http.createServer(mod.default).listen(${simPort})
   `
@@ -428,7 +428,7 @@ try {
       // eslint-disable-next-line no-await-in-loop
       await sleep(150)
     }
-    check('the Vercel handler boots without a listener of its own', up, simErr.slice(0, 200))
+    check('a generated Vercel function boots without its own listener', up, simErr.slice(0, 200))
     if (up) {
       const simSearch = await fetch(`http://127.0.0.1:${simPort}/api/music/search?q=vybz%20katel&limit=30`)
       const simBody = await simSearch.json().catch(() => ({}))

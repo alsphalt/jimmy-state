@@ -243,7 +243,7 @@ so recognition never answers with a stale match; the UI shows an offline notice 
 ## 10. Tests
 
 ```bash
-npm test                 # API suite (74 checks) + download transport (8 checks)
+npm test                 # 74 API + 8 download-transport + 27 routing checks
 node tests/ssr-smoke.mjs # renders all 18 routes server-side and asserts the shell
 ```
 
@@ -264,9 +264,30 @@ messages rather than silent success.
 
 ### Vercel (static frontend + serverless API — this is the one that works on `*.vercel.app`)
 
-`vercel.json` and `api/[...route].js` are included. The `/api` directory is Vercel's
-functions directory, so every `/api/*` request is handed to the Express app; the rest is
-served from `dist/`, with a fallback rewrite for client routes.
+**Vercel functions have no catch-all.** A file named `api/[...route].js` is matched as a
+*single* path segment, not as "anything below /api" — that is why `/api/health` worked in
+production while `/api/music/search` returned Vercel's own 404 page. Each route shape now
+has its own small function file, all delegating to the same Express app:
+
+```
+api/health.js                 api/music/search.js        api/videos/catalog.js
+api/recognize.js              api/music/charts.js        api/videos/catalog/[id].js
+api/downloads/resolve.js      api/music/artists.js       api/videos/search.js
+api/downloads/file.js         api/music/track/[id].js    api/videos/[id].js
+api/metadata/track.js         api/music/albums/[artistId].js   api/videos/[id]/related.js
+```
+
+They are generated from the Express route table so the two can never drift:
+
+```bash
+npm run api:routes          # regenerate after adding a route
+npm run api:routes -- --check   # CI guard (also part of npm test)
+```
+
+Because every file delegates to the full app, Vercel's static-vs-dynamic precedence cannot
+misroute anything: Express still receives the original URL and does the matching.
+
+The rest of the site is served from `dist/`, with a fallback rewrite for client routes.
 
 1. Import the repo in Vercel. Framework preset **Other**; build command and output
    directory come from `vercel.json` (`npm run build` → `dist`).
@@ -283,8 +304,19 @@ ACR_METADATA_TOKEN=…      # optional (platform links)
 `.env` is gitignored and is **not** uploaded — on Vercel the dashboard is the only
 source of configuration. Missing values are reported at `/api/health` under `env`.
 
-3. Redeploy. Verify: `curl https://<project>.vercel.app/api/health` returns
-   `"musicRecognition": true`.
+3. Redeploy (env-var changes require a new deployment).
+
+4. Verify the deployment serves the API, not just the shell:
+
+```bash
+curl -s https://<project>.vercel.app/api/health | head -c 200
+curl -s "https://<project>.vercel.app/api/music/search?q=vybz%20katel&limit=30" | head -c 300
+```
+
+The first must return JSON with `"musicCatalogue": true`; the second must return JSON with
+an `items` array. An HTML page or a plain `The page could not be found` means the functions
+directory did not deploy — check that `api/` is committed and that the build log lists the
+functions.
 
 Serverless constraints to know:
 
