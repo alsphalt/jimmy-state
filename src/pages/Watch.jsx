@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import YouTubePlayer from '../components/YouTubePlayer.jsx'
 import VideoCard from '../components/VideoCard.jsx'
 import { EmptyState, Loading } from '../components/ui.jsx'
@@ -21,6 +21,7 @@ import { normalizeVideo } from '../lib/track.js'
 const isCatalogId = (id) => /^mv-\d+$/.test(id)
 
 export default function Watch() {
+  const navigate = useNavigate()
   const { id } = useParams()
   const catalog = isCatalogId(id)
   const { recordWatched, toggleSavedVideo, toggleWatchLater, savedVideoIds, laterIds, watched, watchLater, videos } =
@@ -89,6 +90,45 @@ export default function Watch() {
   const saved = savedVideoIds.has(id)
   const later = laterIds.has(id)
   const downloadable = Boolean(catalog && video?.previewUrl)
+
+  // A saved TikTok post is not a YouTube video: render TikTok's own embed and skip the
+  // YouTube metadata path entirely.
+  if (/^tt-\d+$/.test(id)) {
+    const tikTokId = id.slice(3)
+    const saved = [...watched, ...watchLater, ...videos].map((v) => v.video).find((v) => v?.videoId === id)
+    const shareUrl = saved?.watchUrl || `https://www.tiktok.com/@i/video/${tikTokId}`
+    return (
+      <>
+        <button type="button" className="icon-btn" aria-label="Back" onClick={() => navigate(-1)} style={{ marginBottom: 10 }}>
+          <IconArrowLeft size={18} />
+        </button>
+        <div className="tt-frame" style={{ marginTop: 0 }}>
+          <iframe
+            src={`https://www.tiktok.com/embed/v2/${tikTokId}`}
+            title={`TikTok ${tikTokId}`}
+            allow="encrypted-media; fullscreen; picture-in-picture"
+            allowFullScreen
+            loading="lazy"
+            referrerPolicy="strict-origin-when-cross-origin"
+          />
+        </div>
+        <h1 style={{ marginTop: 14, fontSize: 20 }}>{saved?.title || 'TikTok post'}</h1>
+        <p className="small muted">{saved?.channel || 'TikTok'}</p>
+        <div className="row gap-8 wrap" style={{ marginTop: 12 }}>
+          <a className="chip" href={shareUrl} target="_blank" rel="noreferrer noopener">
+            Open on TikTok <IconExternal size={12} />
+          </a>
+          <button type="button" className="chip" onClick={() => toggleSavedVideo(saved || { videoId: id, title: 'TikTok post', channel: 'TikTok', watchUrl: shareUrl, kind: 'tiktok' })}>
+            {savedVideoIds.has(id) ? 'Saved' : 'Save'}
+          </button>
+        </div>
+        <p className="tiny mute" style={{ marginTop: 12 }}>
+          Plays in TikTok&rsquo;s official embed. TikTok publishes no public file URL, so there is no download or
+          watermark-stripped copy here.
+        </p>
+      </>
+    )
+  }
 
   return (
     <>

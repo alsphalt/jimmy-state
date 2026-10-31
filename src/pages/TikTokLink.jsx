@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Artwork, Loading } from '../components/ui.jsx'
 import { IconAlert, IconChevron, IconExternal, IconLink, IconPlay } from '../components/Icons.jsx'
 import { api } from '../lib/api.js'
-import { useToast } from '../context/LibraryContext.jsx'
+import { useLibrary, useToast } from '../context/LibraryContext.jsx'
 
 /**
  * TikTok link → playable post.
@@ -16,6 +16,7 @@ export default function TikTokLink() {
   const [url, setUrl] = useState('')
   const [state, setState] = useState({ loading: false, error: null, data: null })
   const { toast } = useToast()
+  const { toggleSavedVideo, savedVideoIds } = useLibrary()
 
   const submit = async (event) => {
     event.preventDefault()
@@ -32,6 +33,19 @@ export default function TikTokLink() {
     } catch (err) {
       setState({ loading: false, error: err.message, data: null })
     }
+  }
+
+  const onPaste = (event) => {
+    const text = event.clipboardData?.getData('text') || ''
+    if (!/tiktok\.com/i.test(text)) return
+    event.preventDefault()
+    setUrl(text)
+    // Paste is a clear intent, so resolve immediately instead of asking for a tap.
+    setState({ loading: true, error: null, data: null })
+    api
+      .tiktok(text)
+      .then((data) => setState({ loading: false, error: null, data }))
+      .catch((err) => setState({ loading: false, error: err.message, data: null }))
   }
 
   const clear = () => {
@@ -61,6 +75,7 @@ export default function TikTokLink() {
             placeholder="https://www.tiktok.com/@user/video/…"
             value={url}
             onChange={(event) => setUrl(event.target.value)}
+            onPaste={onPaste}
             spellCheck="false"
             autoComplete="off"
             aria-label="TikTok video link"
@@ -122,6 +137,24 @@ export default function TikTokLink() {
               <a className="chip" href={state.data.shareUrl} target="_blank" rel="noreferrer noopener">
                 Open on TikTok <IconExternal size={12} />
               </a>
+              <button
+                type="button"
+                className="chip"
+                aria-pressed={savedVideoIds.has(`tt-${state.data.videoId}`)}
+                onClick={() =>
+                  toggleSavedVideo({
+                    videoId: `tt-${state.data.videoId}`,
+                    title: state.data.title || 'TikTok post',
+                    channel: state.data.author || 'TikTok',
+                    thumbnail: state.data.thumbnail,
+                    watchUrl: state.data.shareUrl,
+                    kind: 'tiktok',
+                    source: 'tiktok',
+                  })
+                }
+              >
+                {savedVideoIds.has(`tt-${state.data.videoId}`) ? 'Saved' : 'Save to library'}
+              </button>
               <button
                 type="button"
                 className="chip"
