@@ -160,6 +160,50 @@ try {
   )
   check('no fabricated video payload when unconfigured', videos.res.status !== 503 || videos.body.items === undefined)
 
+  console.log('\ndownload size cap')
+  {
+    // A second instance with a 1 KB ceiling: the real preview is hundreds of KB, so the
+    // cap must refuse it before a single byte reaches the client.
+    const capPort = 3900 + Math.floor(Math.random() * 90)
+    const capServer = spawn(process.execPath, ['server/index.js'], {
+      cwd: ROOT,
+      env: { ...process.env, PORT: String(capPort), MAX_DOWNLOAD_BYTES: '1000', NODE_ENV: 'test' },
+      stdio: ['ignore', 'ignore', 'pipe'],
+    })
+    let capErr = ''
+    capServer.stderr.on('data', (d) => (capErr += d))
+    try {
+      let up = false
+      for (let i = 0; i < 40; i++) {
+        // eslint-disable-next-line no-await-in-loop
+        try {
+          if ((await fetch(`http://127.0.0.1:${capPort}/api/health`)).ok) {
+            up = true
+            break
+          }
+        } catch {
+          /* not yet */
+        }
+        // eslint-disable-next-line no-await-in-loop
+        await sleep(150)
+      }
+      if (up && withPreview?.previewUrl) {
+        const capped = await fetch(`http://127.0.0.1:${capPort}/api/downloads/resolve`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: withPreview.previewUrl }),
+        })
+        const cappedBody = await capped.json().catch(() => ({}))
+        check('a file above the limit is refused (413)', capped.status === 413 && cappedBody.code === 'TOO_LARGE', `status ${capped.status}`)
+        check('the refusal states the size and the limit', /MB limit|above the/.test(cappedBody.error || ''), cappedBody.error)
+      } else {
+        skip('download size cap', up ? 'no preview url available' : capErr.slice(0, 120))
+      }
+    } finally {
+      capServer.kill('SIGTERM')
+    }
+  }
+
   console.log('\ncatalogue videos (keyless)')
   const catalog = await json('/api/videos/catalog?q=amapiano&limit=3')
   check('catalogue video search works without any key', catalog.res.ok && catalog.body.items.length > 0, `status ${catalog.res.status}`)
@@ -354,6 +398,46 @@ try {
     ),
   )
   check('recognition endpoint is rate limited', rate.some((r) => r.status === 429), `statuses ${[...new Set(rate.map((r) => r.status))]}`)
+
+  console.log('\nserverless entry (Vercel shape)')
+  const simPort = 3700 + Math.floor(Math.random() * 200)
+  const simCode = `
+    const mod = await import(${JSON.stringify(path.join(ROOT, 'api', '[...route].js'))})
+    const http = await import('node:http')
+    http.createServer(mod.default).listen(${simPort})
+  `
+  const sim = spawn(process.execPath, ['--input-type=module', '-e', simCode], {
+    cwd: ROOT,
+    stdio: ['ignore', 'ignore', 'pipe'],
+  })
+  let simErr = ''
+  sim.stderr.on('data', (d) => (simErr += d))
+  try {
+    let up = false
+    for (let i = 0; i < 40; i++) {
+      // eslint-disable-next-line no-await-in-loop
+      try {
+        const probe = await fetch(`http://127.0.0.1:${simPort}/api/health`)
+        if (probe.ok) {
+          up = true
+          break
+        }
+      } catch {
+        /* not yet */
+      }
+      // eslint-disable-next-line no-await-in-loop
+      await sleep(150)
+    }
+    check('the Vercel handler boots without a listener of its own', up, simErr.slice(0, 200))
+    if (up) {
+      const simSearch = await fetch(`http://127.0.0.1:${simPort}/api/music/search?q=vybz%20katel&limit=30`)
+      const simBody = await simSearch.json().catch(() => ({}))
+      check('the exact URL that 404\'d on Vercel works through the handler', simSearch.ok && simBody.items?.length > 0, `status ${simSearch.status}`)
+      check('handled response keeps the API shape', simBody.ok === true && Array.isArray(simBody.items))
+    }
+  } finally {
+    sim.kill('SIGTERM')
+  }
 
   console.log(`\n${passed} passed, ${failed} failed, ${skipped} skipped`)
   if (failures.length) {

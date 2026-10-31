@@ -49,42 +49,86 @@ export async function resolveSource(url, fileName) {
   return data
 }
 
-/** Stream the file into memory with real progress, abortable. */
-export async function fetchWithProgress(streamUrl, { expectedSize = 0, onProgress, signal } = {}) {
-  const res = await fetch(streamUrl, { signal })
-  if (!res.ok) {
-    let message = `Download failed (HTTP ${res.status}).`
-    try {
-      const body = await res.json()
-      if (body?.error) message = body.error
-    } catch {
-      /* not json */
+/**
+ * Stream the file into memory with real progress, abortable.
+ *
+ * Two independent guards, because a download can fail in two different ways:
+ *  - a caller abort (Cancel button) via `signal`
+ *  - a stalled source: no bytes for `idleTimeoutMs`, which otherwise leaves the
+ *    progress bar frozen forever with no error and no way back.
+ */
+export async function fetchWithProgress(
+  streamUrl,
+  { expectedSize = 0, onProgress, signal, idleTimeoutMs = 30000 } = {},
+) {
+  const controller = new AbortController()
+  let stalled = false
+  let idleTimer = null
+
+  const forwardAbort = () => controller.abort()
+  if (signal) {
+    if (signal.aborted) forwardAbort()
+    else signal.addEventListener('abort', forwardAbort, { once: true })
+  }
+  const armIdle = () => {
+    clearTimeout(idleTimer)
+    idleTimer = setTimeout(() => {
+      stalled = true
+      controller.abort()
+    }, idleTimeoutMs)
+  }
+
+  try {
+    const res = await fetch(streamUrl, { signal: controller.signal })
+    if (!res.ok) {
+      let message = `Download failed (HTTP ${res.status}).`
+      try {
+        const body = await res.json()
+        if (body?.error) message = body.error
+      } catch {
+        /* not json */
+      }
+      throw Object.assign(new Error(message), { code: 'DOWNLOAD_HTTP' })
     }
-    throw Object.assign(new Error(message), { code: 'DOWNLOAD_HTTP' })
-  }
 
-  const total = Number(res.headers.get('content-length') || expectedSize || 0)
-  if (!res.body?.getReader) {
-    const blob = await res.blob()
-    onProgress?.({ received: blob.size, total: blob.size || total, percent: 100 })
+    const total = Number(res.headers.get('content-length') || expectedSize || 0)
+    if (!res.body?.getReader) {
+      const blob = await res.blob()
+      onProgress?.({ received: blob.size, total: blob.size || total, percent: 100 })
+      return blob
+    }
+
+    const reader = res.body.getReader()
+    const chunks = []
+    let received = 0
+    armIdle()
+    for (;;) {
+      // eslint-disable-next-line no-await-in-loop
+      const { done, value } = await reader.read()
+      if (done) break
+      armIdle()
+      chunks.push(value)
+      received += value.length
+      const pct = total ? Math.min(99, Math.round((received / total) * 100)) : 0
+      onProgress?.({ received, total, percent: pct })
+    }
+    const blob = new Blob(chunks, { type: res.headers.get('content-type') || 'application/octet-stream' })
+    onProgress?.({ received, total: total || received, percent: 100 })
     return blob
+  } catch (err) {
+    if (stalled) {
+      throw Object.assign(
+        new Error(
+          `The download stalled — no data arrived for ${Math.round(idleTimeoutMs / 1000)}s. Use Retry to continue.`,
+        ),
+        { code: 'DOWNLOAD_STALLED' },
+      )
+    }
+    throw err
+  } finally {
+    clearTimeout(idleTimer)
+    if (signal) signal.removeEventListener('abort', forwardAbort)
   }
-
-  const reader = res.body.getReader()
-  const chunks = []
-  let received = 0
-  for (;;) {
-    // eslint-disable-next-line no-await-in-loop
-    const { done, value } = await reader.read()
-    if (done) break
-    chunks.push(value)
-    received += value.length
-    const pct = total ? Math.min(99, Math.round((received / total) * 100)) : 0
-    onProgress?.({ received, total, percent: pct })
-  }
-  const blob = new Blob(chunks, { type: res.headers.get('content-type') || 'application/octet-stream' })
-  onProgress?.({ received, total: total || received, percent: 100 })
-  return blob
 }
 
 /**

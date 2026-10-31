@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "JIMMY STATE — music recognition, discovery, video streaming and authorized downloads.",
+  "description": "JIMMY STATE \u2014 music recognition, discovery, video streaming and authorized downloads.",
   "scripts": {
     "dev": "concurrently -n api,web -c magenta,cyan \"node server/index.js\" \"vite\"",
     "dev:api": "node server/index.js",
@@ -12,7 +12,9 @@
     "start": "node server/index.js",
     "preview": "vite preview",
     "icons": "node scripts/make-icons.mjs",
-    "test": "node tests/run.mjs"
+    "test": "node tests/run.mjs && node tests/download-client.mjs",
+    "test:api": "node tests/run.mjs",
+    "test:downloads": "node tests/download-client.mjs"
   },
   "engines": {
     "node": ">=18"

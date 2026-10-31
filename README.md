@@ -243,7 +243,7 @@ so recognition never answers with a stale match; the UI shows an offline notice 
 ## 10. Tests
 
 ```bash
-npm test                 # API suite (69 checks) — spawns the server on a random port
+npm test                 # API suite (74 checks) + download transport (8 checks)
 node tests/ssr-smoke.mjs # renders all 18 routes server-side and asserts the shell
 ```
 
@@ -261,6 +261,48 @@ Those paths are implemented against the documented browser APIs and fail with ex
 messages rather than silent success.
 
 ## 11. Deploy
+
+### Vercel (static frontend + serverless API — this is the one that works on `*.vercel.app`)
+
+`vercel.json` and `api/[...route].js` are included. The `/api` directory is Vercel's
+functions directory, so every `/api/*` request is handed to the Express app; the rest is
+served from `dist/`, with a fallback rewrite for client routes.
+
+1. Import the repo in Vercel. Framework preset **Other**; build command and output
+   directory come from `vercel.json` (`npm run build` → `dist`).
+2. **Settings → Environment Variables** (Production + Preview):
+
+```
+ACR_ACCESS_KEY=…          # required for recognition
+ACR_ACCESS_SECRET=…       # required for recognition
+ACR_HOST=identify-ap-southeast-1.acrcloud.com
+YOUTUBE_API_KEY=…         # optional
+ACR_METADATA_TOKEN=…      # optional (platform links)
+```
+
+`.env` is gitignored and is **not** uploaded — on Vercel the dashboard is the only
+source of configuration. Missing values are reported at `/api/health` under `env`.
+
+3. Redeploy. Verify: `curl https://<project>.vercel.app/api/health` returns
+   `"musicRecognition": true`.
+
+Serverless constraints to know:
+
+- **Request body ≤ 4.5 MB** (platform limit). A 10 s WAV sample is ~320 KB, so recognition
+  is unaffected; the API also caps uploads at 8 MB for self-hosting.
+- **Function duration ≤ 30 s.** Long provider polling loops (the 60–120 s patterns common in
+  bot downloaders) cannot run here at all, which is one more reason downloads only ever
+  proxy a file the provider already publishes.
+- **Rate limiting is per instance**, not global — it is best-effort behind a serverless
+  fan-out. Use a shared store if you need a hard global limit.
+- **No persistent filesystem** is required by design: recognition samples are never
+  written to disk, and the library lives in the browser.
+- Cold starts add ~300–800 ms to the first recognition request.
+
+A frontend hosted elsewhere can point at an API on another host with `VITE_API_BASE`
+(set at build time) plus `CORS_ORIGINS` on the API.
+
+### Node host (Render, Fly, Railway, VPS)
 
 1. Any Node host with HTTPS (required for microphone + PWA): Render, Fly, Railway, a VPS
    behind Caddy/nginx.
@@ -329,7 +371,31 @@ CORS_ORIGINS=https://jimmystate.example.com
 On Replit, `.replit` runs `npm run dev` so both processes start together; put
 `ACR_ACCESS_KEY`, `ACR_ACCESS_SECRET`, `ACR_HOST` in **Secrets** and restart.
 
-## 14. Known limitations
+## 14. What was deliberately not copied
+
+A supplied reference module contained a full YouTube graveyard: `ytdl-core` /
+`@distube/ytdl-core`, `savetube`, `SaveNow`, `ytdown` and a decryption key. Two independent
+reasons it is not in this codebase:
+
+1. **It breaks the rules this app is built on.** Extraction violates YouTube's terms and the
+   "no bypassing platform restrictions" requirement; a Data API key does not authorize it.
+2. **It would not even run here.** Those providers poll for 60–120 s, and a Vercel function
+   is cut off at 30 s — `ytdlv2` alone sleeps 20 × 3 s.
+
+What *was* taken is the engineering discipline behind it, applied where it fits:
+
+| Idea from that module | Where it lives now |
+|---|---|
+| Hard byte ceiling while streaming, plus cleanup on failure | `/api/downloads/file` counts bytes as they pass; an upstream that streams forever is cut at `MAX_DOWNLOAD_BYTES` and the client gets a truncated file, not a runaway 2 GB transfer |
+| Explicit timeout on every outbound request | total timeout on the download proxy (`DOWNLOAD_TIMEOUT_MS`, 120 s) |
+| Detect a dead transfer instead of waiting forever | client `fetchWithProgress` aborts after 30 s without a byte and reports `DOWNLOAD_STALLED` so Retry works |
+| Single error handler per stream (their MaxListeners bug) | one `error` handler, `destroy()` on close/finish, no per-chunk listeners |
+| `Content-Length` is a claim, not a guarantee | verified in tests: the body is counted, never trusted |
+
+Everything else — provider fallback chains, buffer caches keyed by video id, `.part` files on
+disk — is unnecessary because this app never writes media to the server.
+
+## 15. Known limitations
 
 - Recognition requires network access and a configured ACRCloud project; without it the
   app says so instead of pretending.
