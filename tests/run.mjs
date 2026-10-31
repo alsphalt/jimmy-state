@@ -147,7 +147,7 @@ try {
   const charts = await json('/api/music/charts?limit=5')
   check('charts return real data', charts.res.ok && charts.body.items.length > 0)
 
-  const track = await json(`/api/music/track/${withPreview.trackId}`)
+  const track = await json(`/api/music/track?id=${withPreview.trackId}`)
   check('track lookup by id works', track.res.ok && track.body.track.trackId === withPreview.trackId)
 
   console.log('\nvideos')
@@ -212,7 +212,7 @@ try {
   check('video results carry artwork and duration', Boolean(firstVideo?.thumbnail?.startsWith('https://')) && firstVideo?.durationSeconds > 0)
   check('catalogue ids are distinct from YouTube ids', /^mv-\d+$/.test(firstVideo?.videoId || ''), firstVideo?.videoId)
   if (firstVideo?.videoId) {
-    const one = await json(`/api/videos/catalog/${firstVideo.videoId.replace('mv-', '')}`)
+    const one = await json(`/api/videos/catalog?id=${firstVideo.videoId.replace('mv-', '')}`)
     check('catalogue video lookup by id works', one.res.ok && one.body.video.videoId === firstVideo.videoId)
     const resolvedVideo = await json('/api/downloads/resolve', {
       method: 'POST',
@@ -225,7 +225,7 @@ try {
   check('catalogue video search validates input', (await json('/api/videos/catalog?q=')).res.status === 400)
 
   console.log('\nyoutube without a key')
-  const oembedRes = await json('/api/videos/dQw4w9WgXcQ')
+  const oembedRes = await json('/api/videos/item?id=dQw4w9WgXcQ')
   if (oembedRes.res.status === 200 && oembedRes.body.partial) {
     check('oEmbed resolves a video without an API key', Boolean(oembedRes.body.video?.title), oembedRes.body.video?.title)
     check('oEmbed result is marked partial', oembedRes.body.video.partial === true)

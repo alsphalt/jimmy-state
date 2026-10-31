@@ -57,6 +57,11 @@ export function plan(code) {
       groups.get(`${first}::1`).routes.push(route)
       continue
     }
+    if (depth > 2) {
+      throw new Error(
+        `${route} is deeper than /api/<prefix>/<action>. Vercel function routing only supports one dynamic level; use a query parameter instead.`,
+      )
+    }
     const key = `${first}::${depth}`
     if (!groups.has(key)) groups.set(key, { first, depth, routes: [] })
     groups.get(key).routes.push(route)
@@ -68,7 +73,7 @@ export function plan(code) {
       if (depth === 1) relFile = `${first}.js`
       else {
         // Distinct names per depth: [a].js next to [b]/[c].js — never [a].js + [a]/.
-        const params = depth === 2 ? [PARAM_NAMES[0]] : [PARAM_NAMES[1], PARAM_NAMES[2]].slice(0, depth - 1)
+        const params = [PARAM_NAMES[0]]
         relFile = [first, ...params.map((p) => `[${p}]`)].join('/') + '.js'
       }
       const levels = relFile.split('/').length - 1

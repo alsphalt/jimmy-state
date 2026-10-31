@@ -93,17 +93,17 @@ export const api = {
     }),
 
   searchMusic: (q, limit = 20) => request(`/api/music/search?q=${encodeURIComponent(q)}&limit=${limit}`),
-  track: (id) => request(`/api/music/track/${encodeURIComponent(id)}`),
+  track: (id) => request(`/api/music/track?id=${encodeURIComponent(id)}`),
   artists: (q) => request(`/api/music/artists?q=${encodeURIComponent(q)}`),
-  albums: (artistId) => request(`/api/music/albums/${encodeURIComponent(artistId)}`),
+  albums: (artistId) => request(`/api/music/albums?artistId=${encodeURIComponent(artistId)}`),
   charts: (limit = 20) => request(`/api/music/charts?limit=${limit}`),
 
   catalogVideos: (q, limit = 24) => request(`/api/videos/catalog?q=${encodeURIComponent(q)}&limit=${limit}`),
-  catalogVideo: (id) => request(`/api/videos/catalog/${encodeURIComponent(id)}`),
+  catalogVideo: (id) => request(`/api/videos/catalog?id=${encodeURIComponent(id)}`),
 
   searchVideos: (q, limit = 20) => request(`/api/videos/search?q=${encodeURIComponent(q)}&limit=${limit}`),
-  video: (id) => request(`/api/videos/${encodeURIComponent(id)}`),
-  related: (id) => request(`/api/videos/${encodeURIComponent(id)}/related`),
+  video: (id) => request(`/api/videos/item?id=${encodeURIComponent(id)}`),
+  related: (id) => request(`/api/videos/related?id=${encodeURIComponent(id)}`),
 
   metadata: ({ isrc = '', q = '', artist = '' } = {}) => {
     const params = new URLSearchParams()

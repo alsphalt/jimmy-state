@@ -279,9 +279,12 @@ app.get('/api/music/search', softLimit, async (req, res, next) => {
   }
 })
 
-app.get('/api/music/track/:id', softLimit, async (req, res, next) => {
+app.get('/api/music/track', softLimit, async (req, res, next) => {
   try {
-    const track = await lookupTrack(req.params.id, String(req.query.country || 'US').slice(0, 2))
+    if (!req.query.id) {
+      return res.status(400).json({ ok: false, code: 'MISSING_ID', error: 'Provide ?id= with a catalogue track id.' })
+    }
+    const track = await lookupTrack(req.query.id, String(req.query.country || 'US').slice(0, 2))
     if (!track) return res.status(404).json({ ok: false, code: 'TRACK_NOT_FOUND', error: 'That track is not in the catalogue.' })
     res.json({ ok: true, track })
   } catch (err) {
@@ -300,9 +303,12 @@ app.get('/api/music/artists', softLimit, async (req, res, next) => {
   }
 })
 
-app.get('/api/music/albums/:artistId', softLimit, async (req, res, next) => {
+app.get('/api/music/albums', softLimit, async (req, res, next) => {
   try {
-    const items = await artistAlbums(req.params.artistId, { limit: Math.min(Number(req.query.limit) || 12, 25) })
+    if (!req.query.artistId) {
+      return res.status(400).json({ ok: false, code: 'MISSING_ID', error: 'Provide ?artistId=.' })
+    }
+    const items = await artistAlbums(req.query.artistId, { limit: Math.min(Number(req.query.limit) || 12, 25) })
     res.json({ ok: true, items })
   } catch (err) {
     next(err)
@@ -366,29 +372,6 @@ app.get('/api/metadata/track', softLimit, async (req, res, next) => {
  * Catalogue music videos — keyless. Apple publishes a real .m4v preview per video,
  * which is what makes the Videos tab usable before a YouTube key exists.
  */
-app.get('/api/videos/catalog', softLimit, async (req, res, next) => {
-  try {
-    const q = String(req.query.q || '').slice(0, 120)
-    if (!q.trim()) return res.status(400).json({ ok: false, code: 'MISSING_QUERY', error: 'Enter a video title or artist.' })
-    const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 40)
-    const country = String(req.query.country || process.env.CATALOG_COUNTRY || 'US').slice(0, 2).toUpperCase()
-    const items = await searchMusicVideos(q, { limit, country })
-    res.json({ ok: true, source: 'itunes', query: q, count: items.length, items })
-  } catch (err) {
-    next(err)
-  }
-})
-
-app.get('/api/videos/catalog/:id', softLimit, async (req, res, next) => {
-  try {
-    const video = await lookupMusicVideo(req.params.id)
-    if (!video) return res.status(404).json({ ok: false, code: 'VIDEO_NOT_FOUND', error: 'That music video is not in the catalogue.' })
-    res.json({ ok: true, video })
-  } catch (err) {
-    next(err)
-  }
-})
-
 app.get('/api/videos/search', softLimit, async (req, res, next) => {
   try {
     const q = String(req.query.q || '').slice(0, 120)
@@ -409,10 +392,10 @@ app.get('/api/videos/search', softLimit, async (req, res, next) => {
   }
 })
 
-app.get('/api/videos/:id(\\w[\\w-]{10})/related', softLimit, async (req, res, next) => {
+app.get('/api/videos/related', softLimit, async (req, res, next) => {
   try {
     if (!youtubeConfigured()) return res.json({ ok: true, items: [], configured: false })
-    const video = await getVideo(req.params.id)
+    const video = await getVideo(String(req.query.id || ''))
     const items = await relatedVideos(video)
     res.json({ ok: true, items })
   } catch (err) {
@@ -420,11 +403,37 @@ app.get('/api/videos/:id(\\w[\\w-]{10})/related', softLimit, async (req, res, ne
   }
 })
 
-app.get('/api/videos/:id(\\w[\\w-]{10})', softLimit, async (req, res, next) => {
+app.get('/api/videos/catalog', softLimit, async (req, res, next) => {
   try {
+    // One path, two jobs: ?id= fetches one entry, ?q= searches. Keeping both on the
+    // same segment avoids a third URL level, which Vercel functions cannot route.
+    if (req.query.id) {
+      const video = await lookupMusicVideo(String(req.query.id))
+      if (!video) {
+        return res.status(404).json({ ok: false, code: 'VIDEO_NOT_FOUND', error: 'That music video is not in the catalogue.' })
+      }
+      return res.json({ ok: true, video, count: 1 })
+    }
+    const q = String(req.query.q || '').slice(0, 120)
+    if (!q.trim()) return res.status(400).json({ ok: false, code: 'MISSING_QUERY', error: 'Enter a video title or artist.' })
+    const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 40)
+    const country = String(req.query.country || process.env.CATALOG_COUNTRY || 'US').slice(0, 2).toUpperCase()
+    const items = await searchMusicVideos(q, { limit, country })
+    res.json({ ok: true, source: 'itunes', query: q, count: items.length, items })
+  } catch (err) {
+    next(err)
+  }
+})
+
+app.get('/api/videos/item', softLimit, async (req, res, next) => {
+  try {
+    const id = String(req.query.id || '')
+    if (!/^[A-Za-z0-9_-]{11}$/.test(id)) {
+      return res.status(400).json({ ok: false, code: 'INVALID_VIDEO_ID', error: 'Provide ?id= with an 11-character video id.' })
+    }
     if (!youtubeConfigured()) {
       // No key: YouTube's public oEmbed endpoint still gives title/channel/thumbnail.
-      const partial = await oembed(req.params.id)
+      const partial = await oembed(id)
       if (partial) return res.json({ ok: true, video: partial, configured: false, partial: true })
       return res.status(503).json({
         ok: false,
@@ -433,7 +442,7 @@ app.get('/api/videos/:id(\\w[\\w-]{10})', softLimit, async (req, res, next) => {
           'Video metadata needs YOUTUBE_API_KEY. Playback of a valid video id still works through the embedded player.',
       })
     }
-    const video = await getVideo(req.params.id)
+    const video = await getVideo(id)
     res.json({ ok: true, video })
   } catch (err) {
     next(err)
