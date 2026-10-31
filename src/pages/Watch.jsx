@@ -29,6 +29,7 @@ export default function Watch() {
   const [video, setVideo] = useState(null)
   const [state, setState] = useState({ loading: true, error: null, partial: false })
   const [related, setRelated] = useState({ loading: true, items: [], error: null })
+  const [playerDuration, setPlayerDuration] = useState(0)
 
   const cached = [...watched, ...watchLater, ...videos].find((v) => v.videoId === id)?.video
 
@@ -146,10 +147,13 @@ export default function Watch() {
         )
       ) : (
         <>
-          <YouTubePlayer videoId={id} onPlaying={onPlaying} />
+          <YouTubePlayer videoId={id} onPlaying={onPlaying} onDuration={setPlayerDuration} />
           <div className="row gap-6 wrap" style={{ marginTop: 8 }}>
             <span className="badge badge-live">Full video</span>
-            <span className="tiny mute">streams from YouTube · resumes where you stopped</span>
+            <span className="tiny mute">
+              {playerDuration ? `${formatDuration(playerDuration)} · ` : ''}streams from YouTube · resumes where you
+              stopped
+            </span>
           </div>
         </>
       )}
@@ -164,7 +168,9 @@ export default function Watch() {
             <div className="row gap-8 wrap tiny mute" style={{ marginTop: 6 }}>
               <span>{video.channel}</span>
               {video.views ? <span>· {new Intl.NumberFormat().format(video.views)} views</span> : null}
-              {video.durationSeconds ? <span>· {formatDuration(video.durationSeconds)}</span> : null}
+              {video.durationSeconds || playerDuration ? (
+                <span>· {formatDuration(video.durationSeconds || playerDuration)}</span>
+              ) : null}
               {video.publishedAt ? <span>· {formatDate(video.publishedAt)}</span> : null}
               {catalog && video.kind === 'music-video' ? <span>· Apple Music video</span> : null}
             </div>

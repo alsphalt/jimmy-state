@@ -48,7 +48,7 @@ export function parseVideoId(input) {
   )
 }
 
-export default function YouTubePlayer({ videoId, onPlaying, onEnded, startAt = 0 }) {
+export default function YouTubePlayer({ videoId, onPlaying, onEnded, onDuration, startAt = 0 }) {
   const hostRef = useRef(null)
   const playerRef = useRef(null)
   const pollRef = useRef(null)
@@ -81,10 +81,24 @@ export default function YouTubePlayer({ videoId, onPlaying, onEnded, startAt = 0
           events: {
             onReady: (event) => {
               if (resumeAt > 5) event.target.seekTo(resumeAt, true)
+              // The official API is the only keyless source of the true runtime, and it
+              // reports it for the whole upload — a two-hour mix included.
+              try {
+                const total = event.target.getDuration?.()
+                if (Number.isFinite(total) && total > 0) onDuration?.(total)
+              } catch {
+                /* duration arrives later for some live/premiere streams */
+              }
             },
             onStateChange: (event) => {
               if (event.data === 1) {
                 onPlaying?.()
+                try {
+                  const total = event.target.getDuration?.()
+                  if (Number.isFinite(total) && total > 0) onDuration?.(total)
+                } catch {
+                  /* ignore */
+                }
                 clearInterval(pollRef.current)
                 pollRef.current = setInterval(() => {
                   try {
