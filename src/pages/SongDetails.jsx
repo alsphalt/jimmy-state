@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Artwork, EmptyState, PlatformLinks } from '../components/ui.jsx'
+import { parseVideoId } from '../components/YouTubePlayer.jsx'
 import { useTrackActions } from '../components/TrackBits.jsx'
 import {
+  IconAlert,
   IconArrowLeft,
   IconCheck,
   IconDownload,
@@ -27,6 +29,8 @@ export default function SongDetails() {
   const [added, setAdded] = useState('')
   const [meta, setMeta] = useState({ links: [], credits: [], label: '', loading: false })
   const [resolving, setResolving] = useState(false)
+  const [fullError, setFullError] = useState(null)
+  const [linkDraft, setLinkDraft] = useState('')
   const navigate = useNavigate()
 
   const track = useMemo(() => {
@@ -178,9 +182,11 @@ export default function SongDetails() {
             setResolving(true)
             try {
               const found = await api.resolveYoutube(`${a.track.artist} ${a.track.title}`)
+              setFullError(null)
               navigate(`/watch/${found.videoId}`)
-            } catch {
-              window.open(a.track.youtubeSearchUrl, '_blank', 'noopener')
+            } catch (err) {
+              // Never bounce the user out to youtube.com — explain here and offer a link.
+              setFullError(err.message || 'The full track could not be resolved right now.')
             } finally {
               setResolving(false)
             }
@@ -200,6 +206,45 @@ export default function SongDetails() {
           </a>
         )}
       </div>
+
+      {fullError && (
+        <div className="card" style={{ marginTop: 14, padding: 14 }}>
+          <div className="row gap-8" style={{ alignItems: 'center' }}>
+            <IconAlert size={16} />
+            <strong style={{ fontSize: 14 }}>Full track cannot be resolved here</strong>
+          </div>
+          <p className="small muted" style={{ marginTop: 8 }}>{fullError}</p>
+          <p className="tiny mute" style={{ marginTop: 6 }}>
+            Paste a YouTube link and it plays inside JIMMY STATE, full length — nothing opens on youtube.com.
+          </p>
+          <form
+            className="row gap-8"
+            style={{ marginTop: 10 }}
+            onSubmit={(event) => {
+              event.preventDefault()
+              const id = parseVideoId(linkDraft)
+              if (!id) {
+                setFullError('That link does not contain a YouTube video id.')
+                return
+              }
+              navigate(`/watch/${id}`)
+            }}
+          >
+            <input
+              className="input"
+              type="text"
+              inputMode="url"
+              placeholder="https://youtube.com/watch?v=…"
+              value={linkDraft}
+              onChange={(event) => setLinkDraft(event.target.value)}
+              aria-label="YouTube link"
+            />
+            <button type="submit" className="btn btn-primary" disabled={!linkDraft.trim()}>
+              Play here
+            </button>
+          </form>
+        </div>
+      )}
 
       {!a.track.previewUrl && (
         <div className="notice notice-info" style={{ marginTop: 12 }}>
