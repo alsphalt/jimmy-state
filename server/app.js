@@ -350,11 +350,12 @@ app.get('/api/youtube/resolve', softLimit, async (req, res, next) => {
   try {
     const q = String(req.query.q || '').slice(0, 140).trim()
     if (!q) return res.status(400).json({ ok: false, code: 'MISSING_QUERY', error: 'Provide ?q= with "artist title".' })
-    if (!youtubeConfigured()) {
+    const keyProblem = youtubeKeyProblem()
+    if (keyProblem) {
       return res.status(503).json({
         ok: false,
-        code: 'YOUTUBE_NOT_CONFIGURED',
-        error: 'Full-length playback needs YOUTUBE_API_KEY. Add it to the host environment and redeploy.',
+        code: keyProblem.code,
+        error: keyProblem.error,
         searchUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`,
       })
     }
@@ -376,6 +377,38 @@ app.get('/api/youtube/resolve', softLimit, async (req, res, next) => {
     next(err)
   }
 })
+
+/**
+ * Why a YouTube search cannot run, in terms the operator can act on.
+ *
+ * The most common mistake is pasting an OAuth client id (…apps.googleusercontent.com)
+ * or a client secret (GOCSPX-…) into YOUTUBE_API_KEY. Neither can authorise a public
+ * search: both are for a user consent flow, and the secret must never leave the server.
+ */
+function youtubeKeyProblem() {
+  const key = String(process.env.YOUTUBE_API_KEY || '').trim()
+  if (!key) {
+    return {
+      code: 'YOUTUBE_NOT_CONFIGURED',
+      error:
+        'Video search needs YOUTUBE_API_KEY. Google Cloud → APIs & Services → Credentials → Create credentials → API key (enable "YouTube Data API v3" first).',
+    }
+  }
+  if (key.startsWith('GOCSPX-') || key.includes('apps.googleusercontent.com')) {
+    return {
+      code: 'YOUTUBE_WRONG_CREDENTIAL',
+      error:
+        'YOUTUBE_API_KEY holds an OAuth client id/secret. Those authorise a user sign-in flow, not a public search. Create an API key instead (Credentials → Create credentials → API key).',
+    }
+  }
+  if (!key.startsWith('AIza')) {
+    return {
+      code: 'YOUTUBE_KEY_INVALID',
+      error: 'That does not look like a Google API key — they start with "AIza". Copy the key from Credentials → API keys.',
+    }
+  }
+  return null
+}
 
 /* ------------------------------------------------------------- platform links */
 app.get('/api/metadata/track', softLimit, async (req, res, next) => {
@@ -419,7 +452,8 @@ app.get('/api/videos/search', softLimit, async (req, res, next) => {
      * answer with real catalogue music videos and say exactly what they are. Nothing
      * is invented, and the response shape is identical so the UI does not special-case it.
      */
-    if (!youtubeConfigured()) {
+    const keyProblem = youtubeKeyProblem()
+    if (keyProblem) {
       const country = String(req.query.country || process.env.CATALOG_COUNTRY || 'US').slice(0, 2).toUpperCase()
       const items = await searchMusicVideos(q, { limit: Math.min(Number(req.query.limit) || 20, 25), country })
       return res.json({
@@ -430,8 +464,8 @@ app.get('/api/videos/search', softLimit, async (req, res, next) => {
         query: q,
         count: items.length,
         items,
-        notice:
-          'YouTube keyword search needs YOUTUBE_API_KEY. Showing catalogue music videos with playable previews instead.',
+        code: keyProblem.code,
+        notice: `${keyProblem.error} Showing catalogue music videos with playable previews instead.`,
       })
     }
     const { items, nextPageToken } = await searchVideos(q, { maxResults: Math.min(Number(req.query.limit) || 20, 25) })
@@ -480,8 +514,8 @@ app.get('/api/videos/item', softLimit, async (req, res, next) => {
     if (!/^[A-Za-z0-9_-]{11}$/.test(id)) {
       return res.status(400).json({ ok: false, code: 'INVALID_VIDEO_ID', error: 'Provide ?id= with an 11-character video id.' })
     }
-    if (!youtubeConfigured()) {
-      // No key: YouTube's public oEmbed endpoint still gives title/channel/thumbnail.
+    if (youtubeKeyProblem()) {
+      // No usable key: YouTube's public oEmbed endpoint still gives title/channel/thumbnail.
       const partial = await oembed(id)
       if (partial) return res.json({ ok: true, video: partial, configured: false, partial: true })
       return res.status(503).json({

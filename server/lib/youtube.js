@@ -46,9 +46,21 @@ async function apiGet(path, params, timeoutMs = 9000) {
     if (!res.ok) {
       const reason = body?.error?.errors?.[0]?.reason || body?.error?.message || `HTTP ${res.status}`
       const err = new Error(`YouTube API error: ${reason}`)
-      err.code = 'YOUTUBE_API_ERROR'
-      err.status = res.status === 403 ? 429 : 502
-      err.detail = reason
+      // Distinguish "your key is wrong" from "your quota is gone": they need different
+      // fixes, and lumping them into one 502 wastes the operator's time.
+      if (reason === 'keyInvalid' || reason === 'badRequest' || res.status === 400) {
+        err.code = 'YOUTUBE_KEY_INVALID'
+        err.status = 502
+        err.detail = 'Google rejected this API key. Check YouTube Data API v3 is enabled for it and that the key is not restricted to another API.'
+      } else if (reason === 'quotaExceeded' || reason === 'rateLimitExceeded' || res.status === 403) {
+        err.code = 'YOUTUBE_QUOTA'
+        err.status = 429
+        err.detail = 'Daily quota exhausted (10,000 units; one search costs 100). It resets at midnight Pacific.'
+      } else {
+        err.code = 'YOUTUBE_API_ERROR'
+        err.status = 502
+        err.detail = reason
+      }
       throw err
     }
     return body
