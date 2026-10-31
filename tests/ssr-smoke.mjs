@@ -83,6 +83,17 @@ try {
   console.log(`${hasLogo ? '  ✓' : '  ✗'} home renders the D mark inline`)
   if (!hasLogo) failed += 1
 
+  const watchHtml = renderToString(
+    h(
+      MemoryRouter,
+      { initialEntries: ['/watch/dQw4w9WgXcQ'] },
+      h(LibraryProvider, null, h(PlayerProvider, null, h(DownloadsProvider, null, h(App)))),
+    ),
+  )
+  const fullVideoLabel = watchHtml.includes('Full video')
+  console.log(`${fullVideoLabel ? '  ✓' : '  ✗'} watch page labels full-length YouTube playback`)
+  if (!fullVideoLabel) failed += 1
+
   const hasNav = ['Home', 'Discover', 'Identify', 'Videos', 'Library'].every((l) => home.includes(l))
   console.log(`${hasNav ? '  ✓' : '  ✗'} bottom navigation renders all five items`)
   if (!hasNav) failed += 1

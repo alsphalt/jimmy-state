@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Artwork, EmptyState, ErrorBlock, Loading, Segmented } from '../components/ui.jsx'
 import { TrackRow } from '../components/TrackBits.jsx'
 import VideoCard from '../components/VideoCard.jsx'
-import { IconChevron, IconDownload, IconSearch, IconTrash, IconX } from '../components/Icons.jsx'
+import { IconChevron, IconDownload, IconPlay, IconSearch, IconTrash, IconX } from '../components/Icons.jsx'
+import { parseVideoId } from '../components/YouTubePlayer.jsx'
 import { api } from '../lib/api.js'
 import { useLibrary } from '../context/LibraryContext.jsx'
 import { timeAgo } from '../lib/format.js'
@@ -19,6 +20,8 @@ const MODES = [
 
 export default function Search() {
   const [params, setParams] = useSearchParams()
+  const navigate = useNavigate()
+  const [link, setLink] = useState('')
   const mode = MODES.some((m) => m.value === params.get('mode')) ? params.get('mode') : 'music'
   const initialQ = params.get('q') || ''
   const [term, setTerm] = useState(initialQ)
@@ -238,11 +241,37 @@ export default function Search() {
       {state.items.length > 0 && mode === 'videos' && (
         <>
           {state.fallback && (
-            <div className="notice notice-info" style={{ marginTop: 18 }}>
-              <IconSearch size={16} style={{ flex: 'none', marginTop: 1 }} />
-              <div>
-                <strong>Showing catalogue music videos.</strong> {state.notice}
+            <div className="card card-pad" style={{ marginTop: 18 }}>
+              <div className="row gap-8" style={{ marginBottom: 6 }}>
+                <IconSearch size={16} />
+                <strong style={{ fontSize: 13 }}>Showing catalogue music videos</strong>
               </div>
+              <p className="tiny muted">{state.notice}</p>
+              <p className="tiny muted" style={{ marginTop: 8 }}>
+                A YouTube link plays in full — mixes included — without any key:
+              </p>
+              <form
+                className="row gap-8"
+                style={{ marginTop: 8 }}
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  const id = parseVideoId(link)
+                  if (!id) return
+                  navigate(`/watch/${id}`)
+                }}
+              >
+                <input
+                  className="input-plain"
+                  value={link}
+                  onChange={(e) => setLink(e.target.value)}
+                  placeholder="https://youtube.com/watch?v=… or a 2-hour mix link"
+                  aria-label="Paste a YouTube link"
+                  inputMode="url"
+                />
+                <button type="submit" className="btn btn-sm btn-primary" disabled={!parseVideoId(link)}>
+                  <IconPlay size={13} /> Play
+                </button>
+              </form>
             </div>
           )}
           <div className="video-grid" style={{ marginTop: 14 }}>

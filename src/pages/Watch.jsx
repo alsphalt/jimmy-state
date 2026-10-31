@@ -145,7 +145,13 @@ export default function Watch() {
           </div>
         )
       ) : (
-        <YouTubePlayer videoId={id} onPlaying={onPlaying} />
+        <>
+          <YouTubePlayer videoId={id} onPlaying={onPlaying} />
+          <div className="row gap-6 wrap" style={{ marginTop: 8 }}>
+            <span className="badge badge-live">Full video</span>
+            <span className="tiny mute">streams from YouTube · resumes where you stopped</span>
+          </div>
+        </>
       )}
 
       <div style={{ marginTop: 14 }}>
