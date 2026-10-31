@@ -443,3 +443,40 @@ disk — is unnecessary because this app never writes media to the server.
   instead of offering a button that cannot work.
 - Install banner appears only where `beforeinstallprompt` exists (Chromium). iOS gets
   instructions in Settings instead.
+
+## YouTube credentials
+
+`YOUTUBE_API_KEY` must be an **API key** (starts with `AIza`) from a project with
+**YouTube Data API v3** enabled. An OAuth client id (`...apps.googleusercontent.com`)
+or client secret (`GOCSPX-...`) cannot authorise a public search: those belong to a
+user sign-in flow, and the secret must never be committed or shipped to the browser.
+
+The server names the problem instead of failing generically:
+
+| Value supplied | Code |
+|---|---|
+| unset | `YOUTUBE_NOT_CONFIGURED` |
+| `GOCSPX-...` or `...apps.googleusercontent.com` | `YOUTUBE_WRONG_CREDENTIAL` |
+| anything not starting with `AIza` | `YOUTUBE_KEY_INVALID` |
+| key rejected by Google | `YOUTUBE_KEY_INVALID` with Google's reason |
+| key restricted to HTTP referrers | `YOUTUBE_REFERER_BLOCKED` |
+| daily quota spent | `YOUTUBE_QUOTA` (429) |
+
+### Referrer-restricted keys
+
+A key created with the *HTTP referrers (web sites)* restriction is refused for
+server-side calls, which carry no `Referer`:
+
+```
+403 forbidden - Requests from referer <empty> are blocked.
+```
+
+Two ways out, in order of preference:
+
+1. Change the key's application restriction to **None** (or **IP addresses**) - the key
+   is used from a server, so a website restriction does not describe it.
+2. Set `YOUTUBE_REFERER=https://your-site.example` so the API sends the origin the key
+   is restricted to. The claim is accurate, but it is opt-in on purpose.
+
+Quota: 10,000 units/day on the free tier and `search.list` costs 100, so roughly 90
+searches a day. `videos.list` (durations) costs 1.
