@@ -118,17 +118,71 @@ export async function identify(buffer) {
   }
   clearTimeout(timer)
 
+  /**
+   * Diagnostics for a rejected request: the host, the HTTP status, the provider's own
+   * code/message, credential LENGTHS and the clock skew. Never the credential values
+   * and never any audio.
+   */
+  const acrCode = body?.status?.code
+  const acrMsg = String(body?.status?.msg || '').slice(0, 160)
+  const serverDate = res.headers.get('date')
+  const clockSkewMs = serverDate ? Date.now() - new Date(serverDate).getTime() : null
+  const diagnostics = {
+    host: cfg.host,
+    httpStatus: res.status,
+    acrCode: acrCode ?? null,
+    acrMsg,
+    keyLength: cfg.key.length,
+    secretLength: cfg.secret.length,
+    clockSkewMs,
+  }
+
+  // 3001 = invalid access key, 3002/401 = signature rejected. These are configuration
+  // problems, and they must surface as such rather than as "something went wrong".
+  const unauthorized = res.status === 401 || res.status === 403 || acrCode === 3001 || acrCode === 3002
+  if (unauthorized) {
+    console.warn('[jimmy-state] ACRCloud rejected the request', JSON.stringify(diagnostics))
+    let reason
+    if (acrCode === 3001 || res.status === 401) {
+      reason = `ACRCloud rejected the access key (${acrMsg || 'Invalid Access Key'}). ACR_ACCESS_KEY and ACR_ACCESS_SECRET must come from the same project as ACR_HOST (${cfg.host}).`
+    } else if (acrCode === 3002) {
+      reason = `ACRCloud rejected the request signature (${acrMsg || 'Invalid Signature'}). Check ACR_ACCESS_SECRET for stray spaces or quotes${
+        clockSkewMs !== null && Math.abs(clockSkewMs) > 30000
+          ? `, and fix the server clock — it is ${Math.round(clockSkewMs / 1000)}s out`
+          : ''
+      }.`
+    } else {
+      reason = `ACRCloud refused the request (HTTP ${res.status}${acrMsg ? `: ${acrMsg}` : ''}). The configured credentials or host are probably wrong.`
+    }
+    return { ok: false, matched: false, code: 'RECOGNITION_UNAUTHORIZED', reason, matches: [], diagnostics }
+  }
+
+  // 3003 = quota / concurrent limit.
+  if (acrCode === 3003) {
+    console.warn('[jimmy-state] ACRCloud quota', JSON.stringify(diagnostics))
+    return {
+      ok: false,
+      matched: false,
+      code: 'RECOGNITION_QUOTA',
+      reason: 'The recognition quota for this ACRCloud project is used up (limit exceeded). Try again later or raise the plan limit.',
+      matches: [],
+      diagnostics,
+    }
+  }
+
   if (!res.ok) {
+    console.warn('[jimmy-state] ACRCloud HTTP error', JSON.stringify(diagnostics))
     return {
       ok: false,
       matched: false,
       code: 'RECOGNITION_HTTP_ERROR',
-      reason: `Recognition service returned HTTP ${res.status}.`,
+      reason: `The recognition service returned HTTP ${res.status}${acrMsg ? `: ${acrMsg}` : ''}.`,
       matches: [],
+      diagnostics,
     }
   }
 
-  const code = body?.status?.code
+  const code = acrCode
   if (code === 1001) {
     return {
       ok: true,
@@ -145,6 +199,7 @@ export async function identify(buffer) {
       code: 'RECOGNITION_ERROR',
       reason: body?.status?.msg || 'The recognition service could not process this sample.',
       matches: [],
+      diagnostics,
     }
   }
 

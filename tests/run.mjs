@@ -321,6 +321,33 @@ try {
     check('recognition endpoint answers without crashing', false, `status ${rec.res.status}`)
   }
 
+  console.log('\nrecognition failure modes')
+  const methodRes = await fetch(`${BASE}/api/recognize`)
+  const methodBody = await methodRes.json().catch(() => ({}))
+  check('GET on /api/recognize is 405, not 404', methodRes.status === 405, `status ${methodRes.status}`)
+  check('405 names the method to use', methodBody.code === 'METHOD_NOT_ALLOWED' && /POST/.test(methodBody.error || ''))
+
+  try {
+    const dotenv = (await import('dotenv')).default
+    dotenv.config({ path: path.join(ROOT, '.env') })
+    const { identify } = await import('../server/lib/acrcloud.js')
+    const goodKey = process.env.ACR_ACCESS_KEY
+    const secret = process.env.ACR_ACCESS_SECRET || ''
+    process.env.ACR_ACCESS_KEY = 'deadbeefdeadbeefdeadbeefdeadbeef'
+    const bad = await identify(wav)
+    process.env.ACR_ACCESS_KEY = goodKey
+    check('a wrong access key becomes RECOGNITION_UNAUTHORIZED', bad.code === 'RECOGNITION_UNAUTHORIZED', bad.code)
+    check('the auth error is actionable, not generic', /ACR_ACCESS_KEY|access key/i.test(bad.reason || ''), bad.reason)
+    check('the auth error never contains the secret', !secret || !String(bad.reason).includes(secret))
+    check(
+      'diagnostics report shape only',
+      Boolean(bad.diagnostics?.keyLength) && (!secret || !JSON.stringify(bad.diagnostics).includes(secret)),
+    )
+    check('the provider answer is captured for diagnosis', bad.diagnostics?.acrCode === 3001, String(bad.diagnostics?.acrCode))
+  } catch (err) {
+    skip('invalid-credential handling', err.message)
+  }
+
   const rate = await Promise.all(
     Array.from({ length: 14 }, () =>
       fetch(`${BASE}/api/recognize`, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: '' }),

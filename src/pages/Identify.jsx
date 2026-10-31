@@ -1,9 +1,11 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Recognizer from '../components/Recognizer.jsx'
 import { TrackTile } from '../components/TrackBits.jsx'
 import { IconChevron, IconMic, IconShield } from '../components/Icons.jsx'
 import { useLibrary } from '../context/LibraryContext.jsx'
 import { timeAgo } from '../lib/format.js'
+import { api } from '../lib/api.js'
 
 const STEPS = [
   ['Tap the D', 'The browser asks for the microphone the first time. Nothing is recorded before that.'],
@@ -13,6 +15,23 @@ const STEPS = [
 
 export default function Identify() {
   const { identifications } = useLibrary()
+  const [health, setHealth] = useState(null)
+
+  // Recognition state belongs on this page, not on Home. Read-only check: nothing is
+  // recorded and the microphone is not touched until the user taps the D.
+  useEffect(() => {
+    let alive = true
+    api
+      .health()
+      .then((h) => alive && setHealth(h))
+      .catch(() => alive && setHealth({ offline: true }))
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const recognition = health?.capabilities?.musicRecognition
+  const envState = health?.env?.recognition
 
   return (
     <>
@@ -20,6 +39,33 @@ export default function Identify() {
         <span className="eyebrow">Recognition</span>
       </div>
       <h1 style={{ marginBottom: 14 }}>Identify Any Song</h1>
+
+      {health?.offline && (
+        <div className="notice" style={{ marginBottom: 12 }}>
+          <span aria-hidden="true">⚠</span>
+          <div>
+            <strong>The recognition API is not reachable.</strong> Start the server with <code>npm run dev</code> so the
+            app and the API run together.
+          </div>
+        </div>
+      )}
+
+      {health && !health.offline && recognition === false && (
+        <div className="notice" style={{ marginBottom: 12 }}>
+          <span aria-hidden="true">⚠</span>
+          <div>
+            <strong>Recognition is not configured on this server.</strong> Add{' '}
+            <code>ACR_ACCESS_KEY</code>, <code>ACR_ACCESS_SECRET</code> and <code>ACR_HOST</code> to <code>.env</code>{' '}
+            (or the host’s environment settings), then restart.
+            {envState && (
+              <div className="tiny" style={{ marginTop: 6, opacity: 0.9 }}>
+                Server reports — host {envState.ACR_HOST}, key {envState.ACR_ACCESS_KEY}, secret{' '}
+                {envState.ACR_ACCESS_SECRET}.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="card" style={{ padding: '6px 4px 14px' }}>
         <Recognizer />

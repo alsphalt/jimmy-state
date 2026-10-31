@@ -103,6 +103,30 @@ app.use((req, res, next) => {
   next()
 })
 
+/**
+ * Cross-origin support, opt-in.
+ *
+ * Needed only when the frontend is deployed apart from the API (VITE_API_BASE).
+ * No wildcard: an origin must be named in CORS_ORIGINS.
+ */
+const corsOrigins = String(process.env.CORS_ORIGINS || '')
+  .split(',')
+  .map((o) => o.trim().replace(/\/+$/, ''))
+  .filter(Boolean)
+
+app.use('/api', (req, res, next) => {
+  const origin = req.headers.origin
+  if (origin && corsOrigins.includes(origin.replace(/\/+$/, ''))) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+    res.setHeader('Vary', 'Origin')
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+    res.setHeader('Access-Control-Max-Age', '600')
+  }
+  if (req.method === 'OPTIONS') return res.sendStatus(origin && corsOrigins.includes(origin.replace(/\/+$/, '')) ? 204 : 403)
+  next()
+})
+
 app.use(express.json({ limit: '64kb' }))
 
 const noStore = (req, res, next) => {
@@ -163,7 +187,11 @@ app.post(
     const result = await identify(buffer)
     if (!result.ok || !result.matched) {
       const notConfigured = result.code === 'RECOGNITION_NOT_CONFIGURED'
-      return res.status(result.ok ? 200 : notConfigured ? 503 : 502).json({
+      const unauthorized = result.code === 'RECOGNITION_UNAUTHORIZED'
+      const quota = result.code === 'RECOGNITION_QUOTA'
+      return res
+        .status(result.ok ? 200 : notConfigured ? 503 : unauthorized ? 502 : quota ? 429 : 502)
+        .json({
         ok: false,
         matched: false,
         code: result.code || 'NO_MATCH',
@@ -178,6 +206,7 @@ app.post(
               .join(', ')}. Add both values to .env at the project root, or set them in your host's environment settings, then restart.`
           : result.reason || 'No match found.',
         env: notConfigured ? envDiagnostics() : undefined,
+        diagnostics: result.diagnostics,
         results: { exact: null, similar: [], possible: [], total: 0 },
       })
     }
@@ -287,6 +316,19 @@ app.get('/api/music/charts', softLimit, async (req, res, next) => {
   } catch (err) {
     next(err)
   }
+})
+
+/**
+ * Wrong method on a real route is a 405 with an explanation, never a 404 that sends
+ * the frontend hunting for a missing endpoint.
+ */
+app.get('/api/recognize', (req, res) => {
+  res.setHeader('Allow', 'POST')
+  res.status(405).json({
+    ok: false,
+    code: 'METHOD_NOT_ALLOWED',
+    error: 'POST an audio/wav body to /api/recognize. GET is not supported.',
+  })
 })
 
 /* ------------------------------------------------------------- platform links */

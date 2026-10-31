@@ -22,6 +22,7 @@ export default function Recognizer({ hero = false }) {
 
   const recorderRef = useRef(null)
   const abortRef = useRef(null)
+  const inFlight = useRef(false)
   const lastPaint = useRef(0)
   const autoStop = useRef(false)
 
@@ -34,6 +35,7 @@ export default function Recognizer({ hero = false }) {
   )
 
   const reset = useCallback(() => {
+    inFlight.current = false
     setPhase('idle')
     setStatus('')
     setDetail('')
@@ -43,6 +45,8 @@ export default function Recognizer({ hero = false }) {
 
   const submit = useCallback(
     async (blob, seconds, rms) => {
+      if (inFlight.current) return
+      inFlight.current = true
       setPhase('processing')
       setStatus('Matching your sample…')
       setDetail('Holding the fingerprint against the ACRCloud catalogue.')
@@ -74,25 +78,40 @@ export default function Recognizer({ hero = false }) {
           type: 'ok',
           ttl: 5000,
         })
+        inFlight.current = false
         reset()
         navigate(`/results/${record.id}`, { state: { fresh: true } })
       } catch (err) {
         clearTimeout(timer)
         setPhase('error')
+        const status = err.status
         if (err.code === 'OFFLINE') {
           setStatus('You are offline.')
           setDetail('Recognition needs a connection. Your library still works offline.')
-        } else if (err.code === 'RATE_LIMITED') {
-          setStatus('Slow down a moment.')
+        } else if (err.code === 'ENDPOINT_NOT_FOUND') {
+          setStatus('Recognition endpoint missing (404).')
           setDetail(err.message)
         } else if (err.code === 'RECOGNITION_NOT_CONFIGURED') {
           setStatus('Recognition is not configured.')
           setDetail(err.message)
+        } else if (err.code === 'RECOGNITION_UNAUTHORIZED' || status === 401) {
+          setStatus('Recognition credentials rejected (401).')
+          setDetail(err.message)
+        } else if (err.code === 'RECOGNITION_QUOTA' || status === 429 || err.code === 'RATE_LIMITED') {
+          setStatus('Limit reached.')
+          setDetail(err.message)
+        } else if (err.code === 'METHOD_NOT_ALLOWED') {
+          setStatus('Recognition route mismatch (405).')
+          setDetail(err.message)
+        } else if (status >= 500) {
+          setStatus('Server error.')
+          setDetail(err.message || 'The recognition service could not be reached.')
         } else {
           setStatus('Recognition failed.')
           setDetail(err.message || 'The recognition service could not be reached.')
         }
       } finally {
+        inFlight.current = false
         abortRef.current = null
       }
     },
@@ -102,7 +121,7 @@ export default function Recognizer({ hero = false }) {
   const stopAndIdentify = useCallback(
     async (auto = false) => {
       const rec = recorderRef.current
-      if (!rec?.recording) return
+      if (!rec?.recording || inFlight.current) return
       let result
       try {
         result = rec.stop()

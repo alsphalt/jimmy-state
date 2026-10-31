@@ -87,9 +87,25 @@ try {
   console.log(`${hasNav ? '  ✓' : '  ✗'} bottom navigation renders all five items`)
   if (!hasNav) failed += 1
 
-  const hasIdentifyCta = home.includes('Identify Any Song')
-  console.log(`${hasIdentifyCta ? '  ✓' : '  ✗'} “Identify Any Song” call to action present`)
-  if (!hasIdentifyCta) failed += 1
+  // The recognition panel belongs to /identify only.
+  const homeHasPanel = home.includes('Identify Any Song') || home.includes('d-stage') || home.includes('rec-timer')
+  console.log(`${!homeHasPanel ? '  ✓' : '  ✗'} home has no recognition panel`)
+  if (homeHasPanel) failed += 1
+
+  const identifyHtml = renderToString(
+    h(
+      MemoryRouter,
+      { initialEntries: ['/identify'] },
+      h(LibraryProvider, null, h(PlayerProvider, null, h(DownloadsProvider, null, h(App)))),
+    ),
+  )
+  const identifyHasPanel = identifyHtml.includes('Identify Any Song') && identifyHtml.includes('d-stage')
+  console.log(`${identifyHasPanel ? '  ✓' : '  ✗'} identify page renders the recognition panel`)
+  if (!identifyHasPanel) failed += 1
+
+  const homeLeadsToIdentify = home.includes('href="/identify"')
+  console.log(`${homeLeadsToIdentify ? '  ✓' : '  ✗'} home links to the identify page`)
+  if (!homeLeadsToIdentify) failed += 1
 } finally {
   await vite.close()
 }

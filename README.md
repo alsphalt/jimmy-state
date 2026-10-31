@@ -243,7 +243,7 @@ so recognition never answers with a stale match; the UI shows an offline notice 
 ## 10. Tests
 
 ```bash
-npm test                 # API suite (62 checks) — spawns the server on a random port
+npm test                 # API suite (69 checks) — spawns the server on a random port
 node tests/ssr-smoke.mjs # renders all 18 routes server-side and asserts the shell
 ```
 
@@ -297,7 +297,39 @@ the API. If you see `EADDRINUSE`, a stale server is still holding the port:
 ps -eo pid,args | grep "[s]erver/index.js"
 ```
 
-## 13. Known limitations
+## 13. Recognition troubleshooting
+
+The three errors people actually hit, and what each one means:
+
+| Symptom | Real cause | Fix |
+|---|---|---|
+| `Request failed (HTTP 404)` | `/api/recognize` answered by a *static* host — the API is not deployed with the site | run `npm run dev` (both processes), or deploy `server/` and set `VITE_API_BASE` |
+| `Recognition is not configured` | no `ACR_ACCESS_KEY` / `ACR_ACCESS_SECRET` reached the process | check `/api/health` → `env.recognition` (`missing` vs `empty`) and `env.loadedFiles` |
+| `Recognition credentials rejected` | ACRCloud answered `status.code 3001` (invalid access key) or `3002` (bad signature) | key+secret must belong to the project on `ACR_HOST`; check for stray quotes/spaces; keep the server clock accurate |
+
+ACRCloud returns **HTTP 200 with an error code in the body**, so a client that only
+checks the status line reports success on a rejected request. The server inspects
+`status.code`, maps 3001/3002 to `RECOGNITION_UNAUTHORIZED` (502), 3003 to
+`RECOGNITION_QUOTA` (429), and logs `{host, httpStatus, acrCode, acrMsg, keyLength,
+clockSkewMs}` — never the credential values, never the audio.
+
+`GET /api/recognize` answers **405 with an explanation** rather than a bare 404, and the
+Vite proxy answers `502 API_UNREACHABLE` when the API process is missing, so a missing
+backend can no longer masquerade as a missing song.
+
+Split deployment (frontend static, API elsewhere):
+
+```bash
+# build-time, frontend
+VITE_API_BASE=https://api.example.com
+# run-time, API
+CORS_ORIGINS=https://jimmystate.example.com
+```
+
+On Replit, `.replit` runs `npm run dev` so both processes start together; put
+`ACR_ACCESS_KEY`, `ACR_ACCESS_SECRET`, `ACR_HOST` in **Secrets** and restart.
+
+## 14. Known limitations
 
 - Recognition requires network access and a configured ACRCloud project; without it the
   app says so instead of pretending.

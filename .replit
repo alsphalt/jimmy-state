@@ -1,0 +1,21 @@
+# Replit run configuration.
+#
+# The app needs BOTH processes: the API on :3001 and Vite on :5173 (the app proxies
+# /api to the API). Running only the frontend is what produces "Request failed
+# (HTTP 404)" for /api/recognize.
+run = "npm run dev"
+entrypoint = "server/index.js"
+
+[nix]
+channel = "stable-24_05"
+
+[env]
+NODE_ENV = "development"
+
+[[ports]]
+localPort = 5173
+externalPort = 80
+
+[[ports]]
+localPort = 3001
+externalPort = 3001
