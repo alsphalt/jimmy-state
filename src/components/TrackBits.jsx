@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { Artwork } from './ui.jsx'
+import { Artwork, PlatformLinks } from './ui.jsx'
 import { IconDownload, IconHeart, IconPause, IconPlay, IconChevron, IconTrash } from './Icons.jsx'
 import { useLibrary, useToast } from '../context/LibraryContext.jsx'
 import { usePlayer } from '../context/PlayerContext.jsx'
@@ -176,6 +176,7 @@ export function MatchSections({ results }) {
           </div>
         )}
         <HeroActions track={exact} />
+        {exact.links?.length > 0 && <PlatformLinks links={exact.links} />}
       </div>
 
       {similar.length > 0 && (

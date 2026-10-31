@@ -209,6 +209,42 @@ try {
     check('proxy cannot be used as an open relay', proxyAbuse.status === 403)
   }
 
+  console.log('\nplatform links (ACRCloud metadata)')
+  try {
+    const { normaliseMetadataTrack } = await import('../server/lib/acrMetadata.js')
+    const fixture = JSON.parse(fs.readFileSync(path.join(ROOT, 'tests/fixtures/acr-metadata.json'), 'utf8'))
+    const parsed = normaliseMetadataTrack(fixture.data[0])
+    check('metadata parses the reference payload', parsed?.title === 'Blank Space' && parsed?.artist === 'Taylor Swift')
+    check('hi-res cover is downscaled for mobile', /\/600x600bb\.jpg$/.test(parsed.cover), parsed.cover)
+    check('preview clips are collected', parsed.previews.length >= 1 && parsed.previews[0].includes('audio-ssl.itunes.apple.com'))
+    check('apple, deezer and youtube links survive', ['applemusic', 'deezer', 'youtube'].every((p) => parsed.links.some((l) => l.platform === p)))
+    check(
+      'a mislabelled platform link is dropped, not shown as Spotify',
+      !parsed.links.some((l) => l.platform === 'spotify'),
+      parsed.links.map((l) => l.platform).join(','),
+    )
+    check('works/credits are parsed', parsed.works.length === 1 && parsed.works[0].contributors.length === 3)
+    check('non-Apple cover hosts are rejected', normaliseMetadataTrack({ ...fixture.data[0], album: { cover: 'https://evil.example.com/x.jpg', covers: {} } })?.cover === '')
+
+    const metaEndpoint = await fetch(`${BASE}/api/metadata/track?isrc=USCJY1431309`)
+    const metaBody = await metaEndpoint.json().catch(() => ({}))
+    const tokenPresent = Boolean((process.env.ACR_METADATA_TOKEN || '').trim())
+    if (tokenPresent) {
+      check('metadata endpoint answers with a token', [200, 502].includes(metaEndpoint.status), `status ${metaEndpoint.status}`)
+    } else {
+      check(
+        'metadata endpoint says it is unconfigured (503)',
+        metaEndpoint.status === 503 && metaBody.code === 'METADATA_NOT_CONFIGURED',
+        `status ${metaEndpoint.status} code ${metaBody.code}`,
+      )
+      check('unconfigured metadata never breaks recognition', Boolean(metaBody.error?.includes('ACR_METADATA_TOKEN')))
+    }
+    const badMeta = await fetch(`${BASE}/api/metadata/track`)
+    check('metadata endpoint validates input', badMeta.status === 400)
+  } catch (err) {
+    check('metadata client loads', false, err.message)
+  }
+
   console.log('\nresult assembly')
   try {
     const { buildRecognitionResults } = await import('../server/lib/matches.js')

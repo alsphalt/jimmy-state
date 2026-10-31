@@ -29,6 +29,7 @@ npm start                # single server on :3001 serving dist/ + the API
 | Song recognition | **ACRCloud** `/v1/identify` (signed request) | Live with the credentials in `.env` |
 | Artwork, 30s previews, similar songs | **iTunes Search API** (no key) | Live |
 | Charts / trending | **Apple Music** marketing feed, legacy iTunes RSS fallback | Live |
+| Platform links, hi-res covers, composer credits | **ACRCloud External Metadata** (ISRC lookup) | Needs `ACR_METADATA_TOKEN`; degrades to no links |
 | Video search | **YouTube Data API v3** | Needs `YOUTUBE_API_KEY`; otherwise the UI shows setup instructions |
 | Video playback | **YouTube IFrame Player API** | Works with a video id, no key required |
 | Downloads | Authorized hosts only (Apple preview clips by default) | Live |
@@ -104,6 +105,8 @@ record never deletes the file, and the UI says so. Files are never stored in Ind
 ACR_HOST=identify-ap-southeast-1.acrcloud.com
 ACR_ACCESS_KEY=…
 ACR_ACCESS_SECRET=…
+ACR_METADATA_TOKEN=         # optional: console developer token, not the access key
+ACR_METADATA_PLATFORMS=applemusic,spotify,deezer,youtube
 YOUTUBE_API_KEY=            # optional
 CATALOG_COUNTRY=US
 DOWNLOAD_ALLOWED_HOSTS=     # optional extra hosts you may save from
@@ -143,6 +146,12 @@ copy host, access key, access secret. Free trial tier is small (order of ~100
 identifications per month; check current limits), paid plans beyond that. Each request
 uses ~5–12 s of audio.
 
+**ACRCloud metadata token** (optional) — console → **account → developer → create token**.
+It is a separate credential from the identify key/secret and cannot be derived from them.
+Set `ACR_METADATA_TOKEN` to enable “Listen on …” links, 600 px covers and composer
+credits. Lookups are by ISRC (falling back to `title + artist`), cached for 30 minutes.
+These links open the owning platform; they are never used as download sources.
+
 **YouTube Data API v3** — Google Cloud console → enable “YouTube Data API v3” → create an
 API key → restrict it. Default quota is 10,000 units/day; a `search.list` call costs 100
 units, `videos.list` costs 1, so roughly 90 searches/day on the free quota. Requests are
@@ -162,6 +171,7 @@ search shows setup steps, and library/playlists/downloads keep working.
 | GET | `/api/music/artists?q=` | artist search |
 | GET | `/api/music/albums/:artistId` | albums for an artist |
 | GET | `/api/music/charts?limit=&country=` | real chart data, with fallback source |
+| GET | `/api/metadata/track?isrc=` \| `?q=&artist=` | platform links, covers, credits; 503 without a token |
 | GET | `/api/videos/search?q=` | 503 + `YOUTUBE_NOT_CONFIGURED` when no key |
 | GET | `/api/videos/:id` · `/api/videos/:id/related` | metadata / related |
 | POST | `/api/downloads/resolve` | validate a source, return size/format/stream URL |
@@ -229,7 +239,7 @@ so recognition never answers with a stale match; the UI shows an offline notice 
 ## 10. Tests
 
 ```bash
-npm test                 # API suite (34 checks) — spawns the server on a random port
+npm test                 # API suite (52 checks) — spawns the server on a random port
 node tests/ssr-smoke.mjs # renders all 18 routes server-side and asserts the shell
 ```
 

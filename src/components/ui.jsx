@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { initials } from '../lib/format.js'
-import { IconAlert, IconCheck, IconChevron, IconX } from './Icons.jsx'
+import { IconAlert, IconCheck, IconChevron, IconExternal, IconX } from './Icons.jsx'
 import { useToast } from '../context/LibraryContext.jsx'
 
 export function Artwork({ src, alt = '', className = 'art', style, size }) {
@@ -124,6 +124,33 @@ export function OfflineNote() {
       <div>
         <strong>You are offline.</strong> Your saved library, playlists and download history still work. Recognition,
         search and streaming need a connection.
+      </div>
+    </div>
+  )
+}
+
+/**
+ * "Listen on …" links. These are opens, not downloads: playback stays with the
+ * platform that owns the stream.
+ */
+export function PlatformLinks({ links = [], title = 'Listen on' }) {
+  if (!links?.length) return null
+  return (
+    <div className="stack gap-6" style={{ alignItems: 'center' }}>
+      <span className="eyebrow">{title}</span>
+      <div className="row wrap gap-8" style={{ justifyContent: 'center' }}>
+        {links.map((link) => (
+          <a
+            key={`${link.platform}-${link.id || link.url}`}
+            className="chip"
+            href={link.url}
+            target="_blank"
+            rel="noreferrer noopener"
+          >
+            {link.label}
+            <IconExternal size={12} />
+          </a>
+        ))}
       </div>
     </div>
   )

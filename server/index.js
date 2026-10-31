@@ -8,6 +8,7 @@ import dotenv from 'dotenv'
 import { identify, acrConfigured, acrCredentialState } from './lib/acrcloud.js'
 import { buildRecognitionResults } from './lib/matches.js'
 import { searchMusic, lookupTrack, searchArtists, artistAlbums, topSongs } from './lib/itunes.js'
+import { lookupMetadata, metadataConfigured } from './lib/acrMetadata.js'
 import { searchVideos, relatedVideos, getVideo, youtubeConfigured } from './lib/youtube.js'
 import { assertDownloadable, sanitiseFileName, isMediaType, extensionFor, allowedHosts } from './lib/netguard.js'
 import { rateLimit } from './lib/rateLimit.js'
@@ -111,6 +112,7 @@ app.get('/api/health', (req, res) => {
       musicRecognition: acrConfigured(),
       musicCatalogue: true,
       youtubeSearch: youtubeConfigured(),
+      metadataLinks: metadataConfigured(),
       downloads: true,
     },
     env: envDiagnostics(),
@@ -122,6 +124,9 @@ app.get('/api/health', (req, res) => {
       youtube: youtubeConfigured()
         ? 'YouTube search is live.'
         : 'YouTube search disabled: set YOUTUBE_API_KEY. Playback still needs a video id, so the Videos tab stays in setup mode.',
+      metadataLinks: metadataConfigured()
+        ? 'Platform links and hi-res covers are live (ACRCloud metadata).'
+        : 'Platform links disabled: set ACR_METADATA_TOKEN (console → account → developer).',
       downloads:
         'Only files published for download by an allowlisted provider (Apple preview clips by default) can be saved. YouTube downloads are not offered.',
     },
@@ -270,6 +275,34 @@ app.get('/api/music/charts', softLimit, async (req, res, next) => {
     const country = String(req.query.country || 'us').slice(0, 2).toLowerCase()
     const items = await topSongs({ limit, country })
     res.json({ ok: true, source: 'Apple Music most-played feed', items })
+  } catch (err) {
+    next(err)
+  }
+})
+
+/* ------------------------------------------------------------- platform links */
+app.get('/api/metadata/track', softLimit, async (req, res, next) => {
+  try {
+    const isrc = String(req.query.isrc || '').trim().slice(0, 20)
+    const q = String(req.query.q || '').trim().slice(0, 120)
+    const artists = String(req.query.artist || '')
+      .split(',')
+      .map((a) => a.trim())
+      .filter(Boolean)
+      .slice(0, 3)
+    if (!isrc && !q) {
+      return res.status(400).json({ ok: false, code: 'MISSING_QUERY', error: 'Provide an isrc or a q parameter.' })
+    }
+    const result = await lookupMetadata({ isrc, query: q, artists })
+    if (!result.ok) {
+      return res.status(result.code === 'METADATA_NOT_CONFIGURED' ? 503 : 502).json({
+        ok: false,
+        code: result.code,
+        error: result.reason,
+        configured: result.configured,
+      })
+    }
+    res.json({ ok: true, configured: true, count: result.tracks.length, track: result.track })
   } catch (err) {
     next(err)
   }

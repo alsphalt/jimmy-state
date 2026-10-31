@@ -36,6 +36,9 @@ export function normalizeTrack(raw) {
     confidence: typeof raw.confidence === 'number' ? raw.confidence : null,
     acrScore: typeof raw.acrScore === 'number' ? raw.acrScore : null,
     isrc: raw.isrc || '',
+    label: raw.label || '',
+    links: Array.isArray(raw.links) ? raw.links : [],
+    credits: Array.isArray(raw.credits) ? raw.credits : [],
     providers: Array.isArray(raw.providers) ? raw.providers : [],
     youtubeSearchUrl:
       raw.youtubeSearchUrl ||

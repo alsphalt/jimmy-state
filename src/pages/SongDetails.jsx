@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
-import { Artwork, EmptyState } from '../components/ui.jsx'
+import { Artwork, EmptyState, PlatformLinks } from '../components/ui.jsx'
 import { useTrackActions } from '../components/TrackBits.jsx'
 import {
   IconArrowLeft,
@@ -15,6 +15,7 @@ import {
   IconShield,
 } from '../components/Icons.jsx'
 import { useLibrary } from '../context/LibraryContext.jsx'
+import { api } from '../lib/api.js'
 import { formatDate, formatDuration, timeAgo } from '../lib/format.js'
 import { trackKey } from '../lib/track.js'
 
@@ -24,6 +25,7 @@ export default function SongDetails() {
   const { favourites, identifications, playlists, addToPlaylist, createPlaylist } = useLibrary()
   const [newName, setNewName] = useState('')
   const [added, setAdded] = useState('')
+  const [meta, setMeta] = useState({ links: [], credits: [], label: '', loading: false })
 
   const track = useMemo(() => {
     if (location.state?.track) return location.state.track
@@ -42,6 +44,40 @@ export default function SongDetails() {
 
   const a = useTrackActions(track)
   const identified = identifications.find((i) => i.exact?.key === a.track?.key)
+
+  /**
+   * Platform links are looked up on demand. They are enrichment only: if the metadata
+   * token is absent or the service is down, this page simply shows no "listen on" row.
+   */
+  const isrc = a.track?.isrc || ''
+  const title = a.track?.title || ''
+  const artist = a.track?.artist || ''
+  const knownLinks = a.track?.links || []
+
+  useEffect(() => {
+    if (knownLinks.length || (!isrc && !title)) return undefined
+    let alive = true
+    setMeta((m) => ({ ...m, loading: true }))
+    api
+      .metadata({ isrc, q: title, artist })
+      .then((data) => {
+        if (!alive || !data.track) return
+        setMeta({
+          links: data.track.links || [],
+          credits: data.track.works || [],
+          label: data.track.label || '',
+          loading: false,
+        })
+      })
+      .catch(() => alive && setMeta((m) => ({ ...m, loading: false })))
+    return () => {
+      alive = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isrc, title, artist])
+
+  const links = knownLinks.length ? knownLinks : meta.links
+  const credits = a.track?.credits?.length ? a.track.credits : meta.credits
 
   if (!track) {
     return (
@@ -212,11 +248,66 @@ export default function SongDetails() {
             <b>{a.track.previewUrl ? '30-second clip' : 'Not published'}</b>
           </div>
           <div className="kv">
+            <span>ISRC</span>
+            <b className="truncate">{a.track.isrc || '—'}</b>
+          </div>
+          <div className="kv">
+            <span>Label</span>
+            <b className="truncate">{a.track.label || meta.label || '—'}</b>
+          </div>
+          <div className="kv">
             <span>Sources</span>
             <b>{(a.track.providers?.length ? a.track.providers : [a.track.source || 'catalogue']).join(', ')}</b>
           </div>
         </div>
       </div>
+
+      {(links.length > 0 || credits.length > 0) && (
+        <div className="card card-pad" style={{ marginTop: 14 }}>
+          {links.length > 0 && (
+            <>
+              <span className="eyebrow">Listen on</span>
+              <div className="row wrap gap-8" style={{ marginTop: 8 }}>
+                {links.map((link) => (
+                  <a
+                    key={`${link.platform}-${link.id || link.url}`}
+                    className="chip"
+                    href={link.url}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    {link.label}
+                    <IconExternal size={12} />
+                  </a>
+                ))}
+              </div>
+            </>
+          )}
+          {credits.length > 0 && (
+            <>
+              <span className="eyebrow" style={{ display: 'block', marginTop: links.length ? 14 : 0 }}>
+                Credits
+              </span>
+              <div className="stack gap-8" style={{ marginTop: 8 }}>
+                {credits.map((work) => (
+                  <div key={work.iswc || work.name}>
+                    {work.name && <div className="tiny strong">{work.name}</div>}
+                    <div className="tiny mute">
+                      {work.contributors
+                        .map((c) => `${c.name}${c.roles?.length ? ` (${c.roles.join(', ')})` : ''}`)
+                        .join(' · ')}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="tiny mute" style={{ marginTop: 8 }}>
+                Contributor data from ACRCloud works metadata. Publishers and composers may appear under their legal
+                names.
+              </p>
+            </>
+          )}
+        </div>
+      )}
 
       {identified && (
         <div className="card card-pad" style={{ marginTop: 14 }}>

@@ -1,5 +1,6 @@
-import { searchMusic, normaliseItunes } from './itunes.js'
+import { searchMusic } from './itunes.js'
 import { normaliseAcrTrack } from './acrcloud.js'
+import { lookupMetadata, applyMetadata } from './acrMetadata.js'
 
 /**
  * Build the result set around one verified identification.
@@ -60,6 +61,8 @@ function toResult(track, kind) {
     acrScore: typeof track.score === 'number' ? track.score : null,
     confidence: typeof track.score === 'number' ? Math.max(0, Math.min(1, track.score / 100)) : null,
     providers: [...new Set([track.source, track.enrichedBy].filter(Boolean))],
+    links: [],
+    credits: [],
     youtubeSearchUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(
       `${track.title} ${primaryArtist(track.artist)}`,
     )}`,
@@ -81,11 +84,25 @@ export async function buildRecognitionResults(acrMatches, { country = 'US' } = {
   // --- enrich the verified match with artwork + an authorized preview ---
   let exact = toResult(best, 'exact')
   exact.confidence = exact.confidence ?? 0.9
-  try {
-    const candidates = await searchMusic(`${best.title} ${primaryArtist(best.artist)}`, {
-      limit: 10,
-      country,
-    })
+
+  /**
+   * Enrichment runs in parallel so a slow metadata call cannot delay the match:
+   *  - ACRCloud metadata (ISRC → platform links, hi-res cover, extra previews)
+   *  - iTunes search (fallback artwork/preview, plus the similar-song pool)
+   * Both are optional; the verified match is returned even if both fail.
+   */
+  const artist = primaryArtist(best.artist)
+  const [metaResult, itunesResult] = await Promise.allSettled([
+    lookupMetadata({ isrc: best.isrc || '', query: best.title, artists: artist ? [artist] : [] }),
+    searchMusic(`${best.title} ${artist}`, { limit: 10, country }),
+  ])
+
+  if (metaResult.status === 'fulfilled' && metaResult.value?.ok) {
+    exact = applyMetadata(exact, metaResult.value)
+  }
+
+  if (itunesResult.status === 'fulfilled') {
+    const candidates = itunesResult.value || []
     const ranked = candidates
       .map((c) => ({ c, s: similarity(c.title, best.title) + similarity(c.artist, best.artist) * 0.6 }))
       .filter((r) => r.s > 0.55)
@@ -94,20 +111,18 @@ export async function buildRecognitionResults(acrMatches, { country = 'US' } = {
       const hit = ranked[0].c
       exact = {
         ...exact,
-        artwork: hit.artwork || exact.artwork,
-        artworkSmall: hit.artworkSmall || exact.artworkSmall,
-        previewUrl: hit.previewUrl || '',
-        storeUrl: hit.storeUrl || exact.storeUrl,
+        artwork: exact.artwork || hit.artwork,
+        artworkSmall: exact.artworkSmall || hit.artworkSmall,
+        previewUrl: exact.previewUrl || hit.previewUrl || '',
+        storeUrl: exact.storeUrl || hit.storeUrl,
         album: exact.album || hit.album,
         genre: exact.genre || hit.genre,
         durationMs: exact.durationMs || hit.durationMs,
-        trackId: hit.trackId,
+        trackId: exact.trackId || hit.trackId,
         releaseDate: exact.releaseDate || hit.releaseDate,
         providers: [...new Set([...exact.providers, 'itunes'])],
       }
     }
-  } catch {
-    /* artwork enrichment is optional; recognition still stands */
   }
 
   const similar = []

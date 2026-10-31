@@ -50,6 +50,14 @@ export const api = {
   video: (id) => request(`/api/videos/${encodeURIComponent(id)}`),
   related: (id) => request(`/api/videos/${encodeURIComponent(id)}/related`),
 
+  metadata: ({ isrc = '', q = '', artist = '' } = {}) => {
+    const params = new URLSearchParams()
+    if (isrc) params.set('isrc', isrc)
+    if (q) params.set('q', q)
+    if (artist) params.set('artist', artist)
+    return request(`/api/metadata/track?${params.toString()}`)
+  },
+
   resolveDownload: (url, fileName) =>
     request('/api/downloads/resolve', {
       method: 'POST',
