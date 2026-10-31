@@ -546,6 +546,18 @@ app.get('/api/tiktok/resolve', softLimit, async (req, res, next) => {
 app.get('/api/probe', async (req, res) => {
   try {
     const referer = youTubeContext(req).referer
+    if (req.query.yt) {
+      const key = process.env.YOUTUBE_API_KEY || ''
+      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=1&q=${encodeURIComponent(String(req.query.yt))}&key=${key}`
+      const yt = await fetch(url, { headers: referer ? { Referer: referer } : {} })
+      const raw = await yt.text()
+      return res.json({
+        ytStatus: yt.status,
+        sent: referer,
+        keyLength: key.length,
+        raw: raw.slice(0, 600).replaceAll(key, 'KEY'),
+      })
+    }
     const r = await fetch('https://httpbin.org/headers', { headers: { Referer: referer, 'X-Probe': 'jimmy' } })
     const body = await r.json().catch(() => null)
     res.json({ ok: r.ok, sent: referer, seen: body?.headers || null })
