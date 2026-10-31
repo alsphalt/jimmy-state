@@ -16,7 +16,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import http from 'node:http'
 import { fileURLToPath } from 'node:url'
-import { collectRoutes, toFunctionPath } from '../scripts/make-api-routes.mjs'
+import { collectRoutes, plan } from '../scripts/make-api-routes.mjs'
 import handler from '../server/handler.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -52,11 +52,18 @@ function fileToMatcher(file) {
 
 console.log('\nroute coverage')
 for (const route of routes) {
-  const target = toFunctionPath(route)
-  const wanted = `/api${target}`
-  const found = files.some((f) => fileToMatcher(f).test(wanted.replace(/\(.*?\)/g, '')))
-  check(`api file exists for ${route}`, found, `expected ${wanted}`)
+  // Concrete sample URL for a route template: :id(\w[\w-]{10}) -> "dQw4w9WgXcQ"
+  const sample = `/api${route
+    .replace(/^\/api/, '')
+    .split('/')
+    .map((seg) => (seg.startsWith(':') ? 'samplevalue' : seg))
+    .join('/')}`
+  const found = files.some((f) => fileToMatcher(f).test(sample))
+  check(`api file exists for ${route}`, found, `no function matches ${sample}`)
 }
+
+const planned = plan(fs.readFileSync(path.join(ROOT, 'server/app.js'), 'utf8'))
+check('function count stays small (cold starts, build surface)', planned.length <= 12, `${planned.length} functions`)
 
 check(
   'no catch-all function file is published',
