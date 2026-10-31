@@ -30,7 +30,7 @@ export function parseIsoDuration(value) {
   )
 }
 
-async function apiGet(path, params, timeoutMs = 9000) {
+async function apiGet(path, params, { timeoutMs = 9000, referer = '' } = {}) {
   if (!youtubeConfigured()) throw notConfigured()
   const url = new URL(`${API}/${path}`)
   Object.entries(params).forEach(([k, v]) => {
@@ -47,8 +47,8 @@ async function apiGet(path, params, timeoutMs = 9000) {
    * None / IP addresses, since this key is used from a server.
    */
   const headers = { 'User-Agent': 'JimmyState/1.0' }
-  const referer = String(process.env.YOUTUBE_REFERER || '').trim().replace(/\/$/, '')
-  if (referer) headers.Referer = referer
+  const ref = String(referer || process.env.YOUTUBE_REFERER || '').trim().replace(/\/$/, '')
+  if (ref) headers.Referer = ref
 
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
@@ -60,16 +60,17 @@ async function apiGet(path, params, timeoutMs = 9000) {
       const err = new Error(`YouTube API error: ${reason}`)
       // Distinguish "your key is wrong" from "your quota is gone": they need different
       // fixes, and lumping them into one 502 wastes the operator's time.
-      if (reason === 'forbidden' && /referer/i.test(err.message)) {
+      const text = `${body?.error?.message || ''} ${body?.error?.errors?.[0]?.message || ''}`
+      if (/referer/i.test(text) || reason === 'refererBlocked') {
         err.code = 'YOUTUBE_REFERER_BLOCKED'
         err.status = 502
         err.detail =
           'This API key is restricted to HTTP referrers, so server-side calls are refused. Either set YOUTUBE_REFERER to the allowed site, or change the key restriction to None/IP.'
-      } else if (reason === 'keyInvalid' || reason === 'badRequest' || res.status === 400) {
+      } else if (reason === 'keyInvalid' || reason === 'badRequest' || res.status === 400 || reason === 'accessNotConfigured' || /not enabled/i.test(text)) {
         err.code = 'YOUTUBE_KEY_INVALID'
         err.status = 502
         err.detail = 'Google rejected this API key. Check YouTube Data API v3 is enabled for it and that the key is not restricted to another API.'
-      } else if (reason === 'quotaExceeded' || reason === 'rateLimitExceeded' || res.status === 403) {
+      } else if (reason === 'quotaExceeded' || reason === 'rateLimitExceeded' || reason === 'dailyLimitExceeded') {
         err.code = 'YOUTUBE_QUOTA'
         err.status = 429
         err.detail = 'Daily quota exhausted (10,000 units; one search costs 100). It resets at midnight Pacific.'
@@ -147,11 +148,11 @@ export async function searchVideos(query, { maxResults = 20, pageToken = '' } = 
 export async function relatedVideos(video, { maxResults = 8 } = {}) {
   const q = [video?.title, video?.channel].filter(Boolean).join(' ')
   if (!q) return []
-  const { items } = await searchVideos(q, { maxResults: maxResults + 1 })
+  const { items } = await searchVideos(q, { maxResults: maxResults + 1, referer })
   return items.filter((v) => v.videoId !== video?.videoId).slice(0, maxResults)
 }
 
-export async function getVideo(videoId) {
+export async function getVideo(videoId, { referer = '' } = {}) {
   const id = String(videoId || '').trim()
   if (!/^[A-Za-z0-9_-]{11}$/.test(id)) {
     const err = new Error('Invalid video id')
@@ -159,7 +160,7 @@ export async function getVideo(videoId) {
     err.code = 'INVALID_VIDEO_ID'
     throw err
   }
-  const data = await apiGet('videos', { part: 'snippet,contentDetails,statistics,status', id })
+  const data = await apiGet('videos', { part: 'snippet,contentDetails,statistics,status', id }, { referer })
   const item = (data.items || [])[0]
   if (!item) {
     const err = new Error('Video not found or not publicly available')
@@ -168,7 +169,7 @@ export async function getVideo(videoId) {
     throw err
   }
   const base = mapSnippet(item)
-  const [hydrated] = await hydrate([base])
+  const [hydrated] = await hydrate([base], { referer })
   return hydrated
 }
 

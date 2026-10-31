@@ -321,17 +321,23 @@ app.get('/api/music/search', softLimit, async (req, res, next) => {
 
     if (useYouTube) {
       const limit = Math.min(Math.max(Number(req.query.limit) || 30, 1), 30)
-      const { items } = await searchVideos(q, { maxResults: limit })
-      const tracks = items.map(videoToTrack).filter((t) => t.videoId)
-      return res.json({
-        ok: true,
-        source: 'youtube',
-        full: true,
-        query: q,
-        count: tracks.length,
-        items: tracks,
-        note: 'Full-length songs from YouTube. Playback streams; no download is offered.',
-      })
+      try {
+        const { items } = await searchVideos(q, { maxResults: limit, ...youTubeContext(req) })
+        const tracks = items.map(videoToTrack).filter((t) => t.videoId)
+        return res.json({
+          ok: true,
+          source: 'youtube',
+          full: true,
+          query: q,
+          count: tracks.length,
+          items: tracks,
+          note: 'Full-length songs from YouTube. Playback streams; no download is offered.',
+        })
+      } catch (err) {
+        // A present-but-rejected key must not empty the page: fall through to the
+        // catalogue and say what happened.
+        req.youtubeFailure = { code: err.code || 'YOUTUBE_API_ERROR', error: err.detail || err.message }
+      }
     }
 
     const limit = Math.min(Math.max(Number(req.query.limit) || 30, 1), 50)
@@ -344,10 +350,12 @@ app.get('/api/music/search', softLimit, async (req, res, next) => {
       query: q,
       count: items.length,
       items,
-      code: keyProblem?.code,
+      code: keyProblem?.code || req.youtubeFailure?.code,
       note: keyProblem
         ? `${keyProblem.error} Catalogue results below are 30-second previews.`
-        : 'Catalogue results: audio is a 30-second preview.',
+        : req.youtubeFailure
+          ? `${req.youtubeFailure.error} Showing catalogue results instead (30-second previews).`
+          : 'Catalogue results: audio is a 30-second preview.',
     })
   } catch (err) {
     next(err)
@@ -434,7 +442,7 @@ app.get('/api/youtube/resolve', softLimit, async (req, res, next) => {
         searchUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`,
       })
     }
-    const { items } = await searchVideos(q, { maxResults: 8 })
+    const { items } = await searchVideos(q, { maxResults: 8, ...youTubeContext(req) })
     // Prefer the rights-holder upload: official/label channels and "official" titles.
     const official = (v) => /official|vevo/i.test(`${v.title} ${v.channel}`)
     const playable = items.filter((v) => v.durationSeconds > 45 && v.embeddable !== false)
@@ -463,6 +471,15 @@ app.get('/api/youtube/resolve', softLimit, async (req, res, next) => {
  * or a client secret (GOCSPX-…) into YOUTUBE_API_KEY. Neither can authorise a public
  * search: both are for a user consent flow, and the secret must never leave the server.
  */
+/** A key restricted to HTTP referrers needs the origin this request is served from. */
+function youTubeContext(req) {
+  const envRef = String(process.env.YOUTUBE_REFERER || '').trim()
+  if (envRef) return { referer: envRef }
+  const host = req.get('host') || ''
+  if (!host) return { referer: '' }
+  return { referer: `${req.protocol}://${host}` }
+}
+
 function youtubeKeyProblem() {
   const key = String(process.env.YOUTUBE_API_KEY || '').trim()
   if (!key) {
@@ -565,7 +582,27 @@ app.get('/api/videos/search', softLimit, async (req, res, next) => {
         notice: `${keyProblem.error} Showing catalogue music videos with playable previews instead.`,
       })
     }
-    const { items, nextPageToken } = await searchVideos(q, { maxResults: Math.min(Number(req.query.limit) || 20, 25) })
+    try {
+      const { items, nextPageToken } = await searchVideos(q, {
+        maxResults: Math.min(Number(req.query.limit) || 20, 25),
+        ...youTubeContext(req),
+      })
+      return res.json({ ok: true, source: 'youtube', configured: true, query: q, count: items.length, items, nextPageToken })
+    } catch (err) {
+      const country = String(req.query.country || process.env.CATALOG_COUNTRY || 'US').slice(0, 2).toUpperCase()
+      const items = await searchMusicVideos(q, { limit, country })
+      return res.status(200).json({
+        ok: true,
+        source: 'itunes',
+        configured: false,
+        fallback: true,
+        code: err.code || 'YOUTUBE_API_ERROR',
+        query: q,
+        count: items.length,
+        items,
+        notice: `${err.detail || err.message} Showing catalogue music videos instead.`,
+      })
+    }
     res.json({ ok: true, configured: true, source: 'youtube', query: q, count: items.length, items, nextPageToken })
   } catch (err) {
     next(err)
@@ -576,7 +613,7 @@ app.get('/api/videos/related', softLimit, async (req, res, next) => {
   try {
     if (!youtubeConfigured()) return res.json({ ok: true, items: [], configured: false })
     const video = await getVideo(String(req.query.id || ''))
-    const items = await relatedVideos(video)
+    const items = await relatedVideos(video, 8, youTubeContext(req))
     res.json({ ok: true, items })
   } catch (err) {
     next(err)
