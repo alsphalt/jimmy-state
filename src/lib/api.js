@@ -105,6 +105,8 @@ export const api = {
   video: (id) => request(`/api/videos/item?id=${encodeURIComponent(id)}`),
   related: (id) => request(`/api/videos/related?id=${encodeURIComponent(id)}`),
 
+  resolveYoutube: (q) => request(`/api/youtube/resolve?q=${encodeURIComponent(q)}`),
+
   metadata: ({ isrc = '', q = '', artist = '' } = {}) => {
     const params = new URLSearchParams()
     if (isrc) params.set('isrc', isrc)

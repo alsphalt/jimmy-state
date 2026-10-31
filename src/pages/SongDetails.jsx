@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useLocation, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Artwork, EmptyState, PlatformLinks } from '../components/ui.jsx'
 import { useTrackActions } from '../components/TrackBits.jsx'
 import {
@@ -26,6 +26,8 @@ export default function SongDetails() {
   const [newName, setNewName] = useState('')
   const [added, setAdded] = useState('')
   const [meta, setMeta] = useState({ links: [], credits: [], label: '', loading: false })
+  const [resolving, setResolving] = useState(false)
+  const navigate = useNavigate()
 
   const track = useMemo(() => {
     if (location.state?.track) return location.state.track
@@ -155,7 +157,25 @@ export default function SongDetails() {
       <div className="row gap-8 wrap" style={{ marginTop: 14 }}>
         <button type="button" className="btn btn-primary" onClick={a.play} disabled={!a.track.previewUrl}>
           {a.isPlaying ? <IconPause size={16} /> : <IconPlay size={16} />}
-          {a.track.previewUrl ? (a.isPlaying ? 'Pause preview' : 'Play preview') : 'No preview'}
+          {a.track.previewUrl ? (a.isPlaying ? 'Pause preview' : 'Play 30s preview') : 'No preview'}
+        </button>
+        <button
+          type="button"
+          className="btn"
+          disabled={resolving}
+          onClick={async () => {
+            setResolving(true)
+            try {
+              const found = await api.resolveYoutube(`${a.track.artist} ${a.track.title}`)
+              navigate(`/watch/${found.videoId}`)
+            } catch {
+              window.open(a.track.youtubeSearchUrl, '_blank', 'noopener')
+            } finally {
+              setResolving(false)
+            }
+          }}
+        >
+          <IconPlay size={16} /> {resolving ? 'Finding…' : 'Play full'}
         </button>
         <button type="button" className="btn" onClick={a.download} disabled={!a.track.previewUrl}>
           <IconDownload size={16} /> Download preview
@@ -325,9 +345,17 @@ export default function SongDetails() {
         </div>
       )}
 
-      <p className="tiny mute" style={{ marginTop: 18 }}>
-        Previews are provider-published 30-second clips. Playback and download both use that clip — full tracks are
-        never extracted from streaming services.
+      <div className="notice notice-info" style={{ marginTop: 16 }}>
+        <IconShield size={16} style={{ flex: 'none', marginTop: 1 }} />
+        <div>
+          <strong>Preview vs full track.</strong> The catalogue licenses a 30-second clip, so in-app audio is that clip
+          even though the duration above is the real length. <b>Play full</b> opens the official YouTube upload, which
+          streams the whole track (or a two-hour mix) without downloading anything.
+        </div>
+      </div>
+
+      <p className="tiny mute" style={{ marginTop: 12 }}>
+        Full audio is never extracted from streaming services; playback always happens in the platform that hosts it.
       </p>
     </>
   )

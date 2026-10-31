@@ -339,6 +339,44 @@ app.get('/api/recognize', (req, res) => {
   })
 })
 
+/**
+ * Resolve a full-length YouTube upload for a track.
+ *
+ * The catalogue only licenses 30-second previews, so "play the whole song" has to mean
+ * the official upload. This returns a video id for the IFrame player; it never touches
+ * the media itself.
+ */
+app.get('/api/youtube/resolve', softLimit, async (req, res, next) => {
+  try {
+    const q = String(req.query.q || '').slice(0, 140).trim()
+    if (!q) return res.status(400).json({ ok: false, code: 'MISSING_QUERY', error: 'Provide ?q= with "artist title".' })
+    if (!youtubeConfigured()) {
+      return res.status(503).json({
+        ok: false,
+        code: 'YOUTUBE_NOT_CONFIGURED',
+        error: 'Full-length playback needs YOUTUBE_API_KEY. Add it to the host environment and redeploy.',
+        searchUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`,
+      })
+    }
+    const { items } = await searchVideos(q, { maxResults: 5 })
+    const best = items.find((v) => v.durationSeconds > 45 && v.embeddable !== false) || items[0]
+    if (!best) {
+      return res.status(404).json({ ok: false, code: 'NO_MATCH', error: 'No playable upload found for that track.' })
+    }
+    res.json({
+      ok: true,
+      videoId: best.videoId,
+      title: best.title,
+      channel: best.channel,
+      durationSeconds: best.durationSeconds,
+      thumbnail: best.thumbnail,
+      watchUrl: best.watchUrl,
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
 /* ------------------------------------------------------------- platform links */
 app.get('/api/metadata/track', softLimit, async (req, res, next) => {
   try {
