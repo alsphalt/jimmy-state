@@ -475,6 +475,12 @@ app.get('/api/youtube/resolve', softLimit, async (req, res, next) => {
 function youTubeContext(req) {
   const envRef = String(process.env.YOUTUBE_REFERER || '').trim()
   if (envRef) return { referer: envRef }
+
+  // Vercel knows its own public domain; req Host may be an internal/deployment host,
+  // which a referrer allowlist does not contain.
+  const prod = String(process.env.VERCEL_PROJECT_PRODUCTION_URL || '').trim()
+  if (prod) return { referer: `https://${prod.replace(/^https?:\/\//, '')}` }
+
   const host = req.get('host') || ''
   if (!host) return { referer: '' }
   // Behind Vercel the request is terminated at the edge, so req.protocol can read
