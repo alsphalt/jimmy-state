@@ -152,13 +152,24 @@ try {
 
   console.log('\nvideos')
   const videos = await json('/api/videos/search?q=lofi')
-  check(
-    'video search reports the missing key honestly',
-    [503, 200].includes(videos.res.status) &&
-      (videos.res.status === 200 ? Array.isArray(videos.body.items) : videos.body.code === 'YOUTUBE_NOT_CONFIGURED'),
-    `status ${videos.res.status} code ${videos.body?.code}`,
-  )
-  check('no fabricated video payload when unconfigured', videos.res.status !== 503 || videos.body.items === undefined)
+  const ytConfigured = Boolean((process.env.YOUTUBE_API_KEY || '').trim())
+  check('video search always answers with a result shape', videos.res.status === 200, `status ${videos.res.status}`)
+  if (ytConfigured) {
+    check('configured YouTube search is labelled as YouTube', videos.body.source === 'youtube', videos.body.source)
+  } else {
+    check('without a key it falls back to the catalogue', videos.body.fallback === true && videos.body.source === 'itunes', videos.body.source)
+    // Apple does not publish a preview for every entry, so require real ids for all and
+    // a playable preview for most — never a fabricated url.
+    const withPreview = videos.body.items.filter((v) => typeof v.previewUrl === 'string' && v.previewUrl.startsWith('https://'))
+    check(
+      'the fallback results are real catalogue videos',
+      videos.body.items.length > 0 &&
+        videos.body.items.every((v) => /^mv-\d+$/.test(v.videoId)) &&
+        withPreview.length >= Math.ceil(videos.body.items.length * 0.5),
+      `${withPreview.length}/${videos.body.items.length} with previews`,
+    )
+    check('the fallback says the key is missing', /YOUTUBE_API_KEY/.test(videos.body.notice || ''))
+  }
 
   console.log('\ndownload size cap')
   {

@@ -376,17 +376,28 @@ app.get('/api/videos/search', softLimit, async (req, res, next) => {
   try {
     const q = String(req.query.q || '').slice(0, 120)
     if (!q.trim()) return res.status(400).json({ ok: false, code: 'MISSING_QUERY', error: 'Enter a video title or keyword.' })
+    /**
+     * No key: YouTube has no keyless search, so rather than dead-ending the tab we
+     * answer with real catalogue music videos and say exactly what they are. Nothing
+     * is invented, and the response shape is identical so the UI does not special-case it.
+     */
     if (!youtubeConfigured()) {
-      return res.status(503).json({
-        ok: false,
+      const country = String(req.query.country || process.env.CATALOG_COUNTRY || 'US').slice(0, 2).toUpperCase()
+      const items = await searchMusicVideos(q, { limit: Math.min(Number(req.query.limit) || 20, 25), country })
+      return res.json({
+        ok: true,
         configured: false,
-        code: 'YOUTUBE_NOT_CONFIGURED',
-        error:
-          'Video search needs YOUTUBE_API_KEY. Add it to .env (Google Cloud → YouTube Data API v3 → API key) and restart. No placeholder results are shown.',
+        source: 'itunes',
+        fallback: true,
+        query: q,
+        count: items.length,
+        items,
+        notice:
+          'YouTube keyword search needs YOUTUBE_API_KEY. Showing catalogue music videos with playable previews instead.',
       })
     }
     const { items, nextPageToken } = await searchVideos(q, { maxResults: Math.min(Number(req.query.limit) || 20, 25) })
-    res.json({ ok: true, configured: true, query: q, count: items.length, items, nextPageToken })
+    res.json({ ok: true, configured: true, source: 'youtube', query: q, count: items.length, items, nextPageToken })
   } catch (err) {
     next(err)
   }

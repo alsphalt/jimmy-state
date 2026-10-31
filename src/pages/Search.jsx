@@ -22,17 +22,30 @@ export default function Search() {
   const mode = MODES.some((m) => m.value === params.get('mode')) ? params.get('mode') : 'music'
   const initialQ = params.get('q') || ''
   const [term, setTerm] = useState(initialQ)
-  const [state, setState] = useState({ loading: false, error: null, items: [], ran: false, configured: true })
+  const [state, setState] = useState({
+    loading: false,
+    error: null,
+    items: [],
+    ran: false,
+    configured: true,
+    fallback: false,
+    notice: '',
+  })
   const { addSearch, searches, clearSearches, downloads, favourites, videos, identifications } = useLibrary()
 
   const run = async (query, nextMode = mode) => {
     const q = String(query || '').trim()
     if (!q) return
-    setState({ loading: true, error: null, items: [], ran: true, configured: true })
+    setState({ loading: true, error: null, items: [], ran: true, configured: true, fallback: false, notice: '' })
     try {
       let items = []
+      let meta = { configured: true, fallback: false, notice: '' }
       if (nextMode === 'music') items = (await api.searchMusic(q, 30)).items || []
-      else if (nextMode === 'videos') items = (await api.searchVideos(q, 24)).items || []
+      else if (nextMode === 'videos') {
+        const data = await api.searchVideos(q, 24)
+        items = data.items || []
+        meta = { configured: data.configured !== false, fallback: Boolean(data.fallback), notice: data.notice || '' }
+      }
       else if (nextMode === 'artists') items = (await api.artists(q)).items || []
       else if (nextMode === 'albums') {
         const tracks = (await api.searchMusic(q, 40)).items || []
@@ -45,7 +58,7 @@ export default function Search() {
         }
         items = [...seen.values()]
       }
-      setState({ loading: false, error: null, items, ran: true, configured: true })
+      setState({ loading: false, error: null, items, ran: true, ...meta })
       addSearch(q, nextMode)
     } catch (err) {
       setState({
@@ -54,6 +67,8 @@ export default function Search() {
         items: [],
         ran: true,
         configured: err.code !== 'YOUTUBE_NOT_CONFIGURED',
+        fallback: false,
+        notice: '',
       })
     }
   }
@@ -221,11 +236,21 @@ export default function Search() {
       )}
 
       {state.items.length > 0 && mode === 'videos' && (
-        <div className="video-grid" style={{ marginTop: 18 }}>
-          {state.items.map((v) => (
-            <VideoCard key={v.videoId} video={v} />
-          ))}
-        </div>
+        <>
+          {state.fallback && (
+            <div className="notice notice-info" style={{ marginTop: 18 }}>
+              <IconSearch size={16} style={{ flex: 'none', marginTop: 1 }} />
+              <div>
+                <strong>Showing catalogue music videos.</strong> {state.notice}
+              </div>
+            </div>
+          )}
+          <div className="video-grid" style={{ marginTop: 14 }}>
+            {state.items.map((v) => (
+              <VideoCard key={v.videoId} video={v} />
+            ))}
+          </div>
+        </>
       )}
 
       {state.items.length > 0 && mode === 'music' && (
