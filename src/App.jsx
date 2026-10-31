@@ -54,6 +54,7 @@ export default function App() {
           <Route path="/song/:key" element={<Page><SongDetails /></Page>} />
           <Route path="/settings" element={<Page><Settings /></Page>} />
           <Route path="/privacy" element={<Page><Privacy /></Page>} />
+          <Route path="/tools/tiktok" element={<Page><TikTokLink /></Page>} />
           <Route path="*" element={<Page><NotFound /></Page>} />
         </Routes>
       </main>

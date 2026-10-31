@@ -32,6 +32,7 @@ const ROUTES = [
   '/song/test%3A%3Aartist',
   '/settings',
   '/privacy',
+  '/tools/tiktok',
   '/playlists',
   '/watch-later',
   '/results/missing-id',

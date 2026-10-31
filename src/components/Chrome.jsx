@@ -1,9 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
-import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import LogoD from './LogoD.jsx'
 import { Artwork } from './ui.jsx'
 import {
+  IconChevron,
+  IconClock,
   IconCompass,
+  IconDownload,
+  IconList,
+  IconShield,
+  IconTikTok,
   IconHome,
   IconLibrary,
   IconPause,
@@ -18,81 +24,149 @@ import { usePlayer } from '../context/PlayerContext.jsx'
 import { useInstallPrompt } from '../lib/install.js'
 
 /* ------------------------------------------------------------------ top bar */
-export function TopBar() {
-  const navigate = useNavigate()
-  const [menuOpen, setMenuOpen] = useState(false)
-  const menuRef = useRef(null)
+/**
+ * Side drawer.
+ *
+ * Contents are the destinations this app already has — nothing invented here:
+ * /search, /downloads, /playlists, /watch-later, /tools/tiktok, /settings, /privacy.
+ * Each entry is a real route that existed before the drawer, so the pages and their
+ * behaviour are untouched.
+ */
+const DRAWER_SECTIONS = [
+  {
+    title: 'Browse',
+    items: [{ to: '/search', label: 'Search', Icon: IconSearch }],
+  },
+  {
+    title: 'Your stuff',
+    items: [
+      { to: '/downloads', label: 'Downloads', Icon: IconDownload },
+      { to: '/playlists', label: 'Playlists', Icon: IconList },
+      { to: '/watch-later', label: 'Watch later', Icon: IconClock },
+    ],
+  },
+  {
+    title: 'Tools',
+    items: [{ to: '/tools/tiktok', label: 'TikTok link to video', Icon: IconTikTok }],
+  },
+  {
+    title: 'App',
+    items: [
+      { to: '/settings', label: 'Settings', Icon: IconSettings },
+      { to: '/privacy', label: 'Privacy', Icon: IconShield },
+    ],
+  },
+]
 
-  // Close on outside click / Escape, the way a native menu behaves.
+function Drawer({ open, onClose }) {
+  const location = useLocation()
+  const firstItem = useRef(null)
+
+  // Close on navigation, Escape, or when the route changes under us.
   useEffect(() => {
-    if (!menuOpen) return undefined
-    const onDown = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) setMenuOpen(false)
-    }
+    if (!open) return undefined
     const onKey = (event) => {
-      if (event.key === 'Escape') setMenuOpen(false)
+      if (event.key === 'Escape') onClose()
     }
-    document.addEventListener('pointerdown', onDown)
     document.addEventListener('keydown', onKey)
+    document.body.classList.add('drawer-open')
+    const focusTimer = setTimeout(() => firstItem.current?.focus?.(), 120)
     return () => {
-      document.removeEventListener('pointerdown', onDown)
+      clearTimeout(focusTimer)
       document.removeEventListener('keydown', onKey)
+      document.body.classList.remove('drawer-open')
     }
-  }, [menuOpen])
+  }, [open, onClose])
+
+  useEffect(() => {
+    if (open) onClose()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname])
+
+  if (!open) return null
 
   return (
-    <header className="topbar">
-      <div className="shell topbar-inner">
-        <Link to="/" className="brand" aria-label="JIMMY STATE home">
+    <>
+      <div className="drawer-overlay" onClick={onClose} aria-hidden="true" />
+      <aside className="drawer" role="dialog" aria-modal="true" aria-label="Menu">
+        <div className="drawer-head">
           <LogoD size={30} badge />
-          <span className="brand-name">
-            JIMMY <span>STATE</span>
-          </span>
-        </Link>
-        <div className="grow" />
-        <Link to="/search" className="icon-btn" aria-label="Search">
-          <IconSearch size={19} />
-        </Link>
-        <button type="button" className="icon-btn" aria-label="Settings" onClick={() => navigate('/settings')}>
-          <IconSettings size={19} />
-        </button>
-
-        <div className="menu-wrap" ref={menuRef}>
-          <button
-            type="button"
-            className={`icon-btn ${menuOpen ? 'is-active' : ''}`}
-            aria-label="More"
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((open) => !open)}
-          >
-            <IconMenu size={19} />
+          <div className="grow">
+            <strong className="drawer-brand">
+              JIMMY <span>STATE</span>
+            </strong>
+            <span className="tiny mute">Menu</span>
+          </div>
+          <button type="button" className="icon-btn" aria-label="Close menu" onClick={onClose}>
+            <IconX size={18} />
           </button>
-          {menuOpen && (
-            <div className="menu-panel" role="menu">
-              <button
-                type="button"
-                role="menuitem"
-                className="menu-item"
-                onClick={() => {
-                  setMenuOpen(false)
-                  navigate('/tools/tiktok')
-                }}
-              >
-                <span>TikTok link to video</span>
-                <IconChevron size={14} />
-              </button>
-              <p className="menu-empty eyebrow">Coming soon</p>
-              <p className="menu-note">More options will land here.</p>
-            </div>
-          )}
         </div>
-      </div>
-    </header>
+
+        <nav className="drawer-nav">
+          {DRAWER_SECTIONS.map((section) => (
+            <div className="drawer-section" key={section.title}>
+              <span className="drawer-section-title">{section.title}</span>
+              {section.items.map(({ to, label, Icon }, index) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  className={({ isActive }) => `drawer-item ${isActive ? 'is-active' : ''}`}
+                  onClick={onClose}
+                  ref={index === 0 && section.title === 'Browse' ? firstItem : undefined}
+                >
+                  <Icon size={18} />
+                  <span className="grow">{label}</span>
+                  <IconChevron size={14} />
+                </NavLink>
+              ))}
+            </div>
+          ))}
+        </nav>
+
+        <p className="drawer-foot tiny mute">More options coming soon.</p>
+      </aside>
+    </>
   )
 }
 
-/* ------------------------------------------------------------ install banner */
+export function TopBar() {
+  const [open, setOpen] = useState(false)
+  const close = useCallback(() => setOpen(false), [])
+
+  return (
+    <>
+      <header className="topbar">
+        <div className="shell topbar-inner">
+          <Link to="/" className="brand" aria-label="JIMMY STATE home">
+            <LogoD size={30} badge />
+            <span className="brand-name">
+              JIMMY <span>STATE</span>
+            </span>
+          </Link>
+          <div className="grow" />
+          <Link to="/search" className="icon-btn" aria-label="Search">
+            <IconSearch size={19} />
+          </Link>
+          <Link to="/settings" className="icon-btn" aria-label="Settings">
+            <IconSettings size={19} />
+          </Link>
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label="Open menu"
+            aria-haspopup="dialog"
+            aria-expanded={open}
+            onClick={() => setOpen((value) => !value)}
+          >
+            <IconMenu size={20} />
+          </button>
+        </div>
+      </header>
+      <Drawer open={open} onClose={close} />
+    </>
+  )
+}
+
 export function InstallBanner() {
   const { showBanner, install, dismiss, busy } = useInstallPrompt()
   const [closing, setClosing] = useState(false)

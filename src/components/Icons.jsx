@@ -100,6 +100,14 @@ export const IconLink = (p) => (
   </Svg>
 )
 
+/** Music-note mark — used for the TikTok tool. */
+export const IconTikTok = (p) => (
+  <Svg {...p}>
+    <path d="M15 4v9.2a3.3 3.3 0 1 1-2.6-3.2" />
+    <path d="M15 4c.4 2.2 1.9 3.6 4 3.9" />
+  </Svg>
+)
+
 export const IconMenu = (p) => (
   <Svg {...p}>
     <path d="M4 7h16M4 12h16M4 17h16" />
