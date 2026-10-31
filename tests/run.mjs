@@ -402,7 +402,7 @@ try {
   console.log('\nserverless entry (Vercel shape)')
   const simPort = 3700 + Math.floor(Math.random() * 200)
   const simCode = `
-    const mod = await import(${JSON.stringify(path.join(ROOT, 'api', 'music', 'search.js'))})
+    const mod = await import(${JSON.stringify(path.join(ROOT, 'api', 'health.js'))})
     const http = await import('node:http')
     http.createServer(mod.default).listen(${simPort})
   `
