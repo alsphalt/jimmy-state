@@ -38,17 +38,34 @@ async function apiGet(path, params, timeoutMs = 9000) {
   })
   url.searchParams.set('key', process.env.YOUTUBE_API_KEY)
 
+  /**
+   * A key created with "HTTP referrers (web sites)" restrictions is refused for
+   * server-side calls, which carry no Referer at all:
+   *   403 forbidden — "Requests from referer <empty> are blocked."
+   * Sending the site the key is restricted to is accurate, but it must be explicit:
+   * set YOUTUBE_REFERER, or (better) switch the key's application restriction to
+   * None / IP addresses, since this key is used from a server.
+   */
+  const headers = { 'User-Agent': 'JimmyState/1.0' }
+  const referer = String(process.env.YOUTUBE_REFERER || '').trim().replace(/\/$/, '')
+  if (referer) headers.Referer = referer
+
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   try {
-    const res = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': 'JimmyState/1.0' } })
+    const res = await fetch(url, { signal: controller.signal, headers })
     const body = await res.json().catch(() => null)
     if (!res.ok) {
       const reason = body?.error?.errors?.[0]?.reason || body?.error?.message || `HTTP ${res.status}`
       const err = new Error(`YouTube API error: ${reason}`)
       // Distinguish "your key is wrong" from "your quota is gone": they need different
       // fixes, and lumping them into one 502 wastes the operator's time.
-      if (reason === 'keyInvalid' || reason === 'badRequest' || res.status === 400) {
+      if (reason === 'forbidden' && /referer/i.test(err.message)) {
+        err.code = 'YOUTUBE_REFERER_BLOCKED'
+        err.status = 502
+        err.detail =
+          'This API key is restricted to HTTP referrers, so server-side calls are refused. Either set YOUTUBE_REFERER to the allowed site, or change the key restriction to None/IP.'
+      } else if (reason === 'keyInvalid' || reason === 'badRequest' || res.status === 400) {
         err.code = 'YOUTUBE_KEY_INVALID'
         err.status = 502
         err.detail = 'Google rejected this API key. Check YouTube Data API v3 is enabled for it and that the key is not restricted to another API.'

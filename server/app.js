@@ -359,8 +359,11 @@ app.get('/api/youtube/resolve', softLimit, async (req, res, next) => {
         searchUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`,
       })
     }
-    const { items } = await searchVideos(q, { maxResults: 5 })
-    const best = items.find((v) => v.durationSeconds > 45 && v.embeddable !== false) || items[0]
+    const { items } = await searchVideos(q, { maxResults: 8 })
+    // Prefer the rights-holder upload: official/label channels and "official" titles.
+    const official = (v) => /official|vevo/i.test(`${v.title} ${v.channel}`)
+    const playable = items.filter((v) => v.durationSeconds > 45 && v.embeddable !== false)
+    const best = playable.find(official) || playable[0] || items[0]
     if (!best) {
       return res.status(404).json({ ok: false, code: 'NO_MATCH', error: 'No playable upload found for that track.' })
     }

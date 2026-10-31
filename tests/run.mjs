@@ -64,7 +64,9 @@ function makeWav(seconds = 8, rate = 16000) {
 
 const server = spawn(process.execPath, ['server/index.js'], {
   cwd: ROOT,
-  env: { ...process.env, PORT: String(PORT), NODE_ENV: 'test' },
+  // An unusable key keeps the video assertions deterministic regardless of what
+  // YOUTUBE_API_KEY exists in the developer's .env.
+  env: { ...process.env, PORT: String(PORT), NODE_ENV: 'test', YOUTUBE_API_KEY: 'disabled-for-tests' },
   stdio: ['ignore', 'pipe', 'pipe'],
 })
 let serverLog = ''
@@ -168,7 +170,7 @@ try {
         withPreview.length >= Math.ceil(videos.body.items.length * 0.5),
       `${withPreview.length}/${videos.body.items.length} with previews`,
     )
-    check('the fallback says the key is missing', /YOUTUBE_API_KEY/.test(videos.body.notice || ''))
+    check('the fallback explains the credential problem', /YOUTUBE_API_KEY|API key/.test(videos.body.notice || ''))
   }
 
   console.log('\ndownload size cap')
