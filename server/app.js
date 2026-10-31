@@ -64,12 +64,16 @@ const displayPath = (file) => {
   return !rel || rel.startsWith('..') ? file : rel
 }
 
-const envDiagnostics = () => ({
+const envDiagnostics = (req) => ({
   loadedFiles: envLoaded.map(displayPath),
   checked: envCandidates.map((f) => ({ path: displayPath(f), exists: fs.existsSync(f) })),
   filledFromFile: envFilledFromFile,
   recognition: acrCredentialState(),
-  youtube: { YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY?.trim() ? 'present' : 'missing' },
+  youtube: {
+    YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY?.trim() ? 'present' : 'missing',
+    referer: req ? youTubeContext(req).referer || null : null,
+    productionDomain: process.env.VERCEL_PROJECT_PRODUCTION_URL || null,
+  },
 })
 
 const app = express()
@@ -149,7 +153,7 @@ app.get('/api/health', (req, res) => {
       catalogVideos: true,
       downloads: true,
     },
-    env: envDiagnostics(),
+    env: envDiagnostics(req),
     downloadHosts: allowedHosts(),
     notes: {
       recognition: acrConfigured()
