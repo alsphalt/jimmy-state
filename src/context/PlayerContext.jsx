@@ -22,8 +22,10 @@ export function PlayerProvider({ children }) {
 
   useEffect(() => {
     const audio = new Audio()
-    audio.preload = 'none'
-    audio.crossOrigin = 'anonymous'
+    // 'metadata' fetches the clip header up front, so duration and the first frame are
+    // ready when play() is called. No crossOrigin: the samples are never read by script,
+    // and requesting CORS would fail on any host that omits the header.
+    audio.preload = 'metadata'
     audioRef.current = audio
 
     const onTime = () => {
@@ -77,15 +79,26 @@ export function PlayerProvider({ children }) {
       }
       if (current?.key === t.key) {
         if (audio.paused) {
-          try { await audio.play() } catch { setError('Playback was blocked by the browser.') }
+          // A finished clip stays at its end; play() would refuse to restart it.
+          if (audio.ended || (audio.duration && audio.currentTime >= audio.duration - 0.15)) {
+            audio.currentTime = 0
+            setProgress(0)
+          }
+          try {
+            await audio.play()
+          } catch {
+            setError('Playback was blocked by the browser. Tap play again.')
+          }
         } else {
           audio.pause()
         }
         return
       }
       audio.pause()
-      audio.src = t.previewUrl
+      // Mixed content would be blocked outright on the https deployment.
+      audio.src = String(t.previewUrl).replace(/^http:\/\//i, 'https://')
       audio.currentTime = 0
+      audio.load()
       setCurrent(t)
       setProgress(0)
       setDuration(0)
@@ -103,7 +116,15 @@ export function PlayerProvider({ children }) {
     const audio = audioRef.current
     if (!audio || !current) return
     if (audio.paused) {
-      try { await audio.play() } catch { setError('Playback was blocked by the browser.') }
+      if (audio.ended || (audio.duration && audio.currentTime >= audio.duration - 0.15)) {
+        audio.currentTime = 0
+        setProgress(0)
+      }
+      try {
+        await audio.play()
+      } catch {
+        setError('Playback was blocked by the browser. Tap play again.')
+      }
     } else {
       audio.pause()
     }

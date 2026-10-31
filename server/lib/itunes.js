@@ -208,8 +208,47 @@ export async function topSongs({ limit = 20, country = 'us' } = {}) {
   if (!list.length) {
     list = await fromLegacyRss()
   }
-  if (list.length) cacheSet(key, list)
+  if (list.length) {
+    list = await withPreviews(list, country)
+    cacheSet(key, list)
+  }
   return list
+}
+
+/**
+ * The chart feeds list songs but publish no audio. previewUrl comes from the lookup
+ * endpoint, so one batched call fills in every clip. Best effort: a chart that cannot
+ * be enriched is still a valid chart.
+ */
+async function withPreviews(items, country = 'us') {
+  const ids = items.map((it) => String(it.id || '').replace(/^chart:/, '')).filter((n) => /^\d+$/.test(n))
+  if (!ids.length) return items
+  let results = []
+  try {
+    const data = await getJson(
+      `${BASE}/lookup?id=${ids.slice(0, 50).join(',')}&country=${encodeURIComponent(country)}`,
+      8000,
+    )
+    results = data?.results || []
+  } catch {
+    return items
+  }
+  const byId = new Map()
+  results.forEach((r) => {
+    if (r?.previewUrl) byId.set(String(r.trackId), r)
+  })
+  if (!byId.size) return items
+  return items.map((it) => {
+    const hit = byId.get(String(it.id || '').replace(/^chart:/, ''))
+    if (!hit) return it
+    return {
+      ...it,
+      previewUrl: hit.previewUrl,
+      trackId: hit.trackId ?? it.trackId ?? null,
+      artwork: it.artwork || bigArtwork(hit.artworkUrl100 || ''),
+      artworkSmall: it.artworkSmall || bigArtwork(hit.artworkUrl100 || '', 200),
+    }
+  })
 }
 
 /**
