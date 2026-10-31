@@ -539,6 +539,21 @@ app.get('/api/tiktok/resolve', softLimit, async (req, res, next) => {
   }
 })
 
+
+/* ------------------------------------------------------------------ diagnostics */
+// Temporary: proves what headers this runtime actually sends upstream. No secrets are
+// echoed back — only the header names/values we ask the echo service to reflect.
+app.get('/api/_echo', async (req, res) => {
+  try {
+    const referer = youTubeContext(req).referer
+    const r = await fetch('https://httpbin.org/headers', { headers: { Referer: referer, 'X-Probe': 'jimmy' } })
+    const body = await r.json().catch(() => null)
+    res.json({ ok: r.ok, sent: referer, seen: body?.headers || null })
+  } catch (err) {
+    res.status(502).json({ ok: false, error: err.message })
+  }
+})
+
 /* ------------------------------------------------------------- platform links */
 app.get('/api/metadata/track', softLimit, async (req, res, next) => {
   try {
