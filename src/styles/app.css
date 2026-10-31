@@ -863,3 +863,43 @@
     transform: translateY(0) scale(1);
   }
 }
+
+/* --------------------------------------------------------------- tiktok embed */
+.menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  margin: 0 0 8px;
+  border-radius: 11px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+}
+
+.menu-item:hover {
+  background: rgba(59, 109, 255, 0.16);
+  border-color: rgba(59, 109, 255, 0.4);
+}
+
+.tt-frame {
+  margin-top: 14px;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #000;
+}
+
+.tt-frame iframe {
+  display: block;
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  max-height: 70vh;
+  border: 0;
+}

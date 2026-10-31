@@ -105,6 +105,8 @@ export const api = {
   video: (id) => request(`/api/videos/item?id=${encodeURIComponent(id)}`),
   related: (id) => request(`/api/videos/related?id=${encodeURIComponent(id)}`),
 
+  tiktok: (url) => request(`/api/tiktok/resolve?url=${encodeURIComponent(url)}`),
+
   resolveYoutube: (q) => request(`/api/youtube/resolve?q=${encodeURIComponent(q)}`),
 
   metadata: ({ isrc = '', q = '', artist = '' } = {}) => {

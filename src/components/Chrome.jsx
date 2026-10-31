@@ -70,8 +70,20 @@ export function TopBar() {
           </button>
           {menuOpen && (
             <div className="menu-panel" role="menu">
+              <button
+                type="button"
+                role="menuitem"
+                className="menu-item"
+                onClick={() => {
+                  setMenuOpen(false)
+                  navigate('/tools/tiktok')
+                }}
+              >
+                <span>TikTok link to video</span>
+                <IconChevron size={14} />
+              </button>
               <p className="menu-empty eyebrow">Coming soon</p>
-              <p className="menu-note">More options will land here. Nothing to configure yet.</p>
+              <p className="menu-note">More options will land here.</p>
             </div>
           )}
         </div>

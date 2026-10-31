@@ -6,6 +6,7 @@ import { Readable } from 'node:stream'
 import dotenv from 'dotenv'
 
 import { identify, acrConfigured, acrCredentialState } from './lib/acrcloud.js'
+import { resolveTikTok } from './lib/tiktok.js'
 import { buildRecognitionResults } from './lib/matches.js'
 import {
   searchMusic,
@@ -89,7 +90,7 @@ app.use((req, res, next) => {
       "media-src 'self' blob: https:",
       "connect-src 'self' https:",
       "script-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
-      "frame-src https://www.youtube.com https://www.youtube-nocookie.com",
+      "frame-src https://www.youtube.com https://www.youtube-nocookie.com https://www.tiktok.com",
       "style-src 'self' 'unsafe-inline'",
       "font-src 'self' data:",
       "worker-src 'self' blob:",
@@ -486,6 +487,25 @@ function youtubeKeyProblem() {
   }
   return null
 }
+
+
+/* ------------------------------------------------------------------- tiktok link */
+app.get('/api/tiktok/resolve', softLimit, async (req, res, next) => {
+  try {
+    const result = await resolveTikTok(req.query.url)
+    if (!result.ok) {
+      const status = result.code === 'MISSING_URL' || result.code === 'INVALID_URL' ? 400 : result.code === 'NOT_TIKTOK' ? 400 : 422
+      return res.status(status).json({ ok: false, code: result.code, error: result.error })
+    }
+    res.json({
+      ok: true,
+      ...result,
+      note: 'Plays in TikTok\'s official player. TikTok publishes no public file URL, so there is no download.',
+    })
+  } catch (err) {
+    next(err)
+  }
+})
 
 /* ------------------------------------------------------------- platform links */
 app.get('/api/metadata/track', softLimit, async (req, res, next) => {

@@ -331,6 +331,24 @@ try {
     check('metadata client loads', false, err.message)
   }
 
+
+  console.log('\ntiktok link tool')
+  const ttBad = await json('/api/tiktok/resolve?url=https%3A%2F%2Fexample.com%2F%40a%2Fvideo%2F1234567890')
+  check('rejects a non-TikTok link', ttBad.res.status === 400 && ttBad.body.code === 'NOT_TIKTOK', ttBad.body.code)
+  const ttEmpty = await json('/api/tiktok/resolve')
+  check('rejects an empty link', ttEmpty.res.status === 400 && ttEmpty.body.code === 'MISSING_URL', ttEmpty.body.code)
+  const ttParse = await json('/api/tiktok/resolve?url=https%3A%2F%2Fwww.tiktok.com%2F%40user%2Fvideo%2F7400000000000000000')
+  check(
+    'a canonical link resolves to an official embed',
+    ttParse.res.status === 200 && ttParse.body.videoId === '7400000000000000000' && /embed\/v2\//.test(ttParse.body.embedUrl),
+    `status ${ttParse.res.status} id ${ttParse.body.videoId}`,
+  )
+  check(
+    'no fabricated media URL is returned',
+    !('downloadUrl' in ttParse.body) && !/aweme\/v1\/play/.test(JSON.stringify(ttParse.body)),
+    'no downloadUrl field',
+  )
+
   console.log('\nresult assembly')
   try {
     const { buildRecognitionResults } = await import('../server/lib/matches.js')
