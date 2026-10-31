@@ -110,10 +110,10 @@ function mapSnippet(item) {
 }
 
 /** Attach duration / embeddable flags in one batched videos.list call. */
-async function hydrate(videos) {
+async function hydrate(videos, { referer = '' } = {}) {
   const ids = videos.map((v) => v.videoId).filter(Boolean)
   if (!ids.length) return videos
-  const data = await apiGet('videos', { part: 'contentDetails,statistics,status', id: ids.join(','), maxResults: 50 })
+  const data = await apiGet('videos', { part: 'contentDetails,statistics,status', id: ids.join(','), maxResults: 50 }, { referer })
   const byId = new Map((data.items || []).map((v) => [v.id, v]))
   return videos.map((v) => {
     const extra = byId.get(v.videoId)
@@ -128,7 +128,7 @@ async function hydrate(videos) {
   })
 }
 
-export async function searchVideos(query, { maxResults = 20, pageToken = '' } = {}) {
+export async function searchVideos(query, { maxResults = 20, pageToken = '', referer = '' } = {}) {
   const q = String(query || '').trim()
   if (!q) return { items: [], nextPageToken: '' }
   const data = await apiGet('search', {
@@ -139,9 +139,9 @@ export async function searchVideos(query, { maxResults = 20, pageToken = '' } = 
     pageToken,
     videoEmbeddable: 'true',
     safeSearch: 'moderate',
-  })
+  }, { referer })
   const videos = (data.items || []).map(mapSnippet).filter(Boolean)
-  return { items: await hydrate(videos), nextPageToken: data.nextPageToken || '' }
+  return { items: await hydrate(videos, { referer }), nextPageToken: data.nextPageToken || '' }
 }
 
 /** Related videos: keyword search around the seed video (relatedToVideoId is retired). */
