@@ -255,6 +255,9 @@ export async function databaseStatus() {
       error: ping.code === 'DB_TIMEOUT' ? 'timeout' : lastError,
     }
   }
+  // Apply the schema before counting it, so a fresh database reports honestly instead of
+  // "0 tables" until some other request happens to create them.
+  await ensureSchema()
   const tables = await withTimeout(
     query(
       `select count(*)::int as n
