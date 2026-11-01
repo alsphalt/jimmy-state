@@ -110,6 +110,7 @@ ACR_ACCESS_SECRET=…
 ACR_METADATA_TOKEN=         # optional: console developer token, not the access key
 ACR_METADATA_PLATFORMS=applemusic,spotify,deezer,youtube
 YOUTUBE_API_KEY=            # optional
+DATABASE_URL=               # optional: Neon PostgreSQL, server-side only
 CATALOG_COUNTRY=US
 DOWNLOAD_ALLOWED_HOSTS=     # optional extra hosts you may save from
 MAX_DOWNLOAD_BYTES=62914560
@@ -140,6 +141,39 @@ found, without printing values:
 
 `missing` means the variable is absent, `empty` means it exists but is blank — those are
 different problems, and the server log plus the recognition error both name them.
+
+### Database (Neon PostgreSQL)
+
+`DATABASE_URL` is optional. Without it the app behaves exactly as before — the library
+stays on the device and one counter feature goes quiet. With it, the server keeps:
+
+| Table | What it holds | Why |
+|---|---|---|
+| `track_counts` | one row per track per day: title, artist, artwork, hit count | `/api/insights/trending` — what people actually identify |
+| `rate_windows` | hashed bucket + fixed window + hit count | rate limits that hold across serverless instances |
+
+Design rules the code enforces:
+
+- **Server-side only.** Read from `process.env` at request time. Never named `VITE_*`
+  (that would inline it into the browser bundle) and never committed (`*.env` is ignored).
+- **Parameterised.** Every value goes through `$1, $2 …`; a title containing `'; drop table`
+  is stored as text. There is no string interpolation in `server/lib/db.js`.
+- **No per-user trail.** Identifications are counted in daily aggregates. No account, no
+  device id, no IP, no audio — nothing that ties a person to a track.
+- **Never fatal.** A missing, slow (2.5 s cap) or refusing database returns a typed error;
+  recognition, search and playback keep working. `/api/health` reports
+  `database.configured` / `reachable` / `latencyMs` / `tables` and never the URL.
+- **TLS verified.** `rejectUnauthorized: true` by default. `PG_SSL_NO_VERIFY=1` exists for a
+  runtime that does not ship Neon's CA — use it only if the connection otherwise fails.
+
+Apply the schema deliberately (the app also does this on its first query):
+
+```bash
+npm run db:migrate     # prints the tables and row counts, never the connection string
+```
+
+Use Neon's **pooled** connection string on Vercel (the host contains `-pooler`); a direct
+string exhausts connections when several functions cold-start together.
 
 ### Getting the credentials
 

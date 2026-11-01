@@ -21,6 +21,7 @@ import { lookupMetadata, metadataConfigured } from './lib/acrMetadata.js'
 import { searchVideos, relatedVideos, getVideo, youtubeConfigured, oembed } from './lib/youtube.js'
 import { assertDownloadable, sanitiseFileName, isMediaType, extensionFor, allowedHosts } from './lib/netguard.js'
 import { rateLimit } from './lib/rateLimit.js'
+import { databaseConfigured, databaseStatus, recordTrack, topTracks } from './lib/db.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
@@ -140,10 +141,10 @@ const noStore = (req, res, next) => {
 }
 
 /* -------------------------------------------------------------------- health */
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
   res.json({
     ok: true,
-    version: '1.0.0',
+    version: '1.1.0',
     time: new Date().toISOString(),
     capabilities: {
       musicRecognition: acrConfigured(),
@@ -153,6 +154,7 @@ app.get('/api/health', (req, res) => {
       catalogVideos: true,
       downloads: true,
     },
+    database: await databaseStatus(),
     env: envDiagnostics(req),
     downloadHosts: allowedHosts(),
     notes: {
@@ -172,7 +174,7 @@ app.get('/api/health', (req, res) => {
 })
 
 /* ---------------------------------------------------------------- recognition */
-const recognizeLimit = rateLimit({ windowMs: 60_000, max: 12 })
+const recognizeLimit = rateLimit({ windowMs: 60_000, max: 12, name: 'recognize', distributed: true })
 
 app.post(
   '/api/recognize',
@@ -253,6 +255,23 @@ app.post(
       results.total = Math.max(results.total, 1 + results.similar.length + results.possible.length)
     }
 
+    // Aggregate counter only: title/artist/day, no user, no audio, no address. Bounded
+    // so a slow database can never hold the recognition response open.
+    if (databaseConfigured()) {
+      try {
+        await Promise.race([
+          recordTrack({
+            title: results.exact.title,
+            artist: results.exact.artist,
+            artwork: results.exact.artwork,
+          }),
+          new Promise((resolve) => setTimeout(resolve, 1500)),
+        ])
+      } catch {
+        /* tracking is best effort; the match is already valid */
+      }
+    }
+
     res.json({
       ok: true,
       matched: true,
@@ -265,6 +284,40 @@ app.post(
     })
   },
 )
+
+/* ------------------------------------------------------------------- insights */
+
+/**
+ * Most identified tracks over a window. Reads the aggregate table only, so it returns
+ * real counts from this app's own users — never a fabricated ranking.
+ */
+app.get('/api/insights/trending', noStore, async (req, res) => {
+  if (!databaseConfigured()) {
+    return res.status(503).json({
+      ok: false,
+      code: 'DB_NOT_CONFIGURED',
+      error: 'Trending needs a database. Set DATABASE_URL in the host environment.',
+      items: [],
+    })
+  }
+  const result = await topTracks({ days: req.query.days, limit: req.query.limit })
+  if (!result.ok) {
+    // The database message can name internals, so it stays in the server log.
+    return res.status(502).json({
+      ok: false,
+      code: 'DB_UNAVAILABLE',
+      error: 'Trending is temporarily unavailable.',
+      items: [],
+    })
+  }
+  res.json({
+    ok: true,
+    source: 'jimmy-state',
+    windowDays: result.days,
+    count: result.items.length,
+    items: result.items,
+  })
+})
 
 /* --------------------------------------------------------------- music catalogue */
 const softLimit = rateLimit({ windowMs: 60_000, max: 90 })
@@ -683,7 +736,7 @@ app.get('/api/videos/item', softLimit, async (req, res, next) => {
 })
 
 /* -------------------------------------------------------------------- downloads */
-const downloadLimit = rateLimit({ windowMs: 60_000, max: 30 })
+const downloadLimit = rateLimit({ windowMs: 60_000, max: 30, name: 'download', distributed: true })
 const MAX_DOWNLOAD_BYTES = Number(process.env.MAX_DOWNLOAD_BYTES || 60 * 1024 * 1024)
 
 app.post('/api/downloads/resolve', downloadLimit, async (req, res, next) => {

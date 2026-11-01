@@ -5,7 +5,7 @@
  * streams are also left to the network so nothing large is preloaded.
  */
 
-const VERSION = 'js-v1.0.0'
+const VERSION = 'js-v1.1.0'
 const SHELL_CACHE = `${VERSION}-shell`
 const ASSET_CACHE = `${VERSION}-assets`
 

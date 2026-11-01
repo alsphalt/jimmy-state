@@ -52,6 +52,15 @@ export default function Privacy() {
           <span>Video playback</span>
           <b>YouTube IFrame Player</b>
         </div>
+        <div className="kv">
+          <span>Identification counts</span>
+          <b>This app’s own database</b>
+        </div>
+        <p className="tiny muted" style={{ marginTop: 10 }}>
+          A successful identification also increments a counter for that track (title, artist, day). It is an
+          aggregate — no account, no device id, no address, and no link between you and the track — and it exists only
+          so trending can show what this app’s users actually identify.
+        </p>
         <p className="tiny muted" style={{ marginTop: 10 }}>
           Audio samples are produced only while you are identifying: a 16 kHz mono WAV is posted to this app’s server,
           forwarded to ACRCloud, and returned — it is not written to disk and is not retained after the request. Search

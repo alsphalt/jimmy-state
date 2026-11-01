@@ -6,28 +6,10 @@
     <meta name="description" content="JIMMY STATE — identify any song, discover music, stream videos and save authorized downloads in one premium app." />
     <meta name="theme-color" content="#05060a" />
     <meta name="color-scheme" content="dark" />
-    <!-- Runs before the stylesheets paint: without it a light-theme user sees a black
-         flash on every load, and an installed PWA flashes its splash colour. -->
-    <script>
-      (function () {
-        try {
-          var pref = localStorage.getItem('jimmy-state:theme') || 'dark'
-          var isLight =
-            pref === 'light' ||
-            (pref === 'system' &&
-              window.matchMedia &&
-              window.matchMedia('(prefers-color-scheme: light)').matches)
-          var theme = isLight ? 'light' : 'dark'
-          var root = document.documentElement
-          root.setAttribute('data-theme', theme)
-          root.style.colorScheme = theme
-          var color = document.querySelector('meta[name="theme-color"]')
-          if (color) color.setAttribute('content', theme === 'light' ? '#f4f5fa' : '#05060a')
-          var scheme = document.querySelector('meta[name="color-scheme"]')
-          if (scheme) scheme.setAttribute('content', theme)
-        } catch (e) {}
-      })()
-    </script>
+    <!-- Runs before the stylesheets paint so a light-theme user never sees a black
+         flash. Separate file on purpose: the CSP is script-src 'self', which refuses
+         inline scripts. -->
+    <script src="/theme-boot.js?v=1"></script>
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
