@@ -172,7 +172,7 @@ export default function Discover() {
                     type="button"
                     className="list-row"
                     style={{ textAlign: 'left', width: '100%' }}
-                    onClick={() => navigate(`/search?q=${encodeURIComponent(a.name)}&mode=music`)}
+                    onClick={() => navigate(`/search?q=${encodeURIComponent(a.name)}&mode=videos`)}
                   >
                     <span
                       style={{

@@ -9,8 +9,9 @@ import { api } from '../lib/api.js'
 import { useLibrary } from '../context/LibraryContext.jsx'
 import { timeAgo } from '../lib/format.js'
 
+// No Music tab: every song result is a full-length YouTube item now, so a separate
+// catalogue list would only offer the same track as a 30-second preview.
 const MODES = [
-  { value: 'music', label: 'Music' },
   { value: 'videos', label: 'Videos' },
   { value: 'artists', label: 'Artists' },
   { value: 'albums', label: 'Albums' },
@@ -22,7 +23,7 @@ export default function Search() {
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
   const [link, setLink] = useState('')
-  const mode = MODES.some((m) => m.value === params.get('mode')) ? params.get('mode') : 'music'
+  const mode = MODES.some((m) => m.value === params.get('mode')) ? params.get('mode') : 'videos'
   const initialQ = params.get('q') || ''
   const [term, setTerm] = useState(initialQ)
   const [state, setState] = useState({
@@ -44,16 +45,7 @@ export default function Search() {
     try {
       let items = []
       let meta = { configured: true, fallback: false, notice: '' }
-      if (nextMode === 'music') {
-        const data = await api.searchMusic(q, 30)
-        items = data.items || []
-        meta = {
-          ...meta,
-          source: data.source || 'itunes',
-          notice: data.source === 'youtube' ? 'Full-length songs · streamed from YouTube' : data.note || '',
-        }
-      }
-      else if (nextMode === 'videos') {
+      if (nextMode === 'videos') {
         const data = await api.searchVideos(q, 24)
         items = data.items || []
         meta = {
@@ -296,18 +288,10 @@ export default function Search() {
         </>
       )}
 
-      {state.items.length > 0 && mode === 'music' && (
-        <div className="list" style={{ marginTop: 18 }}>
-          {state.items.map((t) => (
-            <TrackRow key={t.id} track={t} subtitle={`${t.artist}${t.album ? ` · ${t.album}` : ''}`} />
-          ))}
-        </div>
-      )}
-
       {state.items.length > 0 && mode === 'artists' && (
         <div className="list" style={{ marginTop: 18 }}>
           {state.items.map((a) => (
-            <Link key={a.id} to={`/search?q=${encodeURIComponent(a.name)}&mode=music`} className="list-row">
+            <Link key={a.id} to={`/search?q=${encodeURIComponent(a.name)}&mode=videos`} className="list-row">
               <span className="dl-icon" style={{ borderRadius: '50%' }}>
                 {a.name.slice(0, 1)}
               </span>
@@ -326,7 +310,7 @@ export default function Search() {
       {state.items.length > 0 && mode === 'albums' && (
         <div className="video-grid" style={{ marginTop: 18 }}>
           {state.items.map((al) => (
-            <Link key={al.id} to={`/search?q=${encodeURIComponent(`${al.artist} ${al.title}`)}&mode=music`} className="video-card">
+            <Link key={al.id} to={`/search?q=${encodeURIComponent(`${al.artist} ${al.title}`)}&mode=videos`} className="video-card">
               <Artwork src={al.artwork} alt={al.title} style={{ aspectRatio: '1/1', height: 'auto', borderRadius: 14 }} />
               <div>
                 <div className="video-title truncate">{al.title}</div>

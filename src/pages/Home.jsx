@@ -67,7 +67,7 @@ export default function Home() {
     event.preventDefault()
     const q = term.trim()
     if (!q) return
-    navigate(`/search?q=${encodeURIComponent(q)}&mode=music`)
+    navigate(`/search?q=${encodeURIComponent(q)}&mode=videos`)
   }
 
   const recentIds = identifications.slice(0, 6)

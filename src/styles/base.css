@@ -45,6 +45,52 @@
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* --------------------------------------------------------------------------
+   Light theme
+   Only the tokens change. Components read tokens, so the same rules produce a
+   bright surface set; the few rules that hardcode a white-alpha surface are
+   remapped at the end of app.css.
+   -------------------------------------------------------------------------- */
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --bg: #f3f4fa;
+  --bg-2: #ffffff;
+  --surface: rgba(255, 255, 255, 0.78);
+  --surface-2: rgba(16, 24, 40, 0.055);
+  --surface-3: rgba(16, 24, 40, 0.095);
+  --charcoal: #ffffff;
+  --line: rgba(16, 24, 40, 0.1);
+  --line-strong: rgba(16, 24, 40, 0.2);
+
+  --text: #0b1020;
+  --text-dim: #3f475c;
+  --text-mute: #6b7488;
+
+  /* Accents darkened just enough to keep 4.5:1 against white. */
+  --blue: #2f5df0;
+  --blue-soft: #4f7dff;
+  --purple: #7c3aed;
+  --cyan: #0e97b3;
+  --green: #0b8f66;
+  --amber: #b45309;
+  --red: #d61f3a;
+
+  --grad-soft: linear-gradient(135deg, rgba(59, 109, 255, 0.14), rgba(139, 92, 246, 0.1) 55%, rgba(34, 211, 238, 0.1));
+
+  --shadow-card: 0 18px 40px -28px rgba(16, 24, 40, 0.35);
+  --glow-blue: 0 0 32px rgba(59, 109, 255, 0.16);
+  --glow-cyan: 0 0 26px rgba(34, 211, 238, 0.14);
+}
+
+:root[data-theme='light'] body {
+  background:
+    radial-gradient(120% 70% at 12% -10%, rgba(59, 109, 255, 0.1), transparent 60%),
+    radial-gradient(90% 60% at 100% 0%, rgba(139, 92, 246, 0.08), transparent 55%),
+    radial-gradient(80% 50% at 50% 110%, rgba(34, 211, 238, 0.06), transparent 60%),
+    var(--bg);
+}
+
 * {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;

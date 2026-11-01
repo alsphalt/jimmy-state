@@ -7,6 +7,7 @@ import { PlayerProvider } from './context/PlayerContext.jsx'
 import { DownloadsProvider } from './context/DownloadsContext.jsx'
 import './styles/base.css'
 import './styles/app.css'
+import { applyTheme, watchSystemTheme } from './lib/theme.js'
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -21,6 +22,11 @@ createRoot(document.getElementById('root')).render(
     </BrowserRouter>
   </React.StrictMode>,
 )
+
+// index.html already applied the stored theme before paint; this keeps 'system'
+// honest if the device appearance changes while the app is open.
+applyTheme()
+watchSystemTheme()
 
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
