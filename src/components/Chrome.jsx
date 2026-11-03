@@ -134,8 +134,13 @@ function Drawer({ open, onClose }) {
 }
 
 export function TopBar() {
+  const location = useLocation()
   const [open, setOpen] = useState(false)
   const close = useCallback(() => setOpen(false), [])
+
+  // Jimmy Tube has its own header and compact nav; stacking the app chrome on top of it
+  // would mean two headers and two nav bars on one screen.
+  if (location.pathname.startsWith('/tools/tube')) return null
 
   return (
     <>
@@ -234,6 +239,7 @@ const NAV = [
 
 export function BottomNav() {
   const location = useLocation()
+  if (location.pathname.startsWith('/tools/tube')) return null
   return (
     <nav className="bottom-nav" aria-label="Primary">
       <div className="bottom-nav-inner">

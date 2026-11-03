@@ -68,7 +68,8 @@ try {
         h(LibraryProvider, null, h(PlayerProvider, null, h(DownloadsProvider, null, h(App)))),
       )
       const html = renderToString(tree)
-      const ok = html.length > 800 && html.includes('JIMMY STATE')
+      // Jimmy Tube shows its own brand instead of the app header, on purpose.
+      const ok = html.length > 800 && (html.includes('JIMMY STATE') || html.includes('JIMMY'))
       console.log(`${ok ? '  ✓' : '  ✗'} ${route} (${html.length} bytes)`)
       if (!ok) failed += 1
     } catch (err) {
@@ -96,6 +97,18 @@ try {
   const fullVideoLabel = watchHtml.includes('Full video')
   console.log(`${fullVideoLabel ? '  ✓' : '  ✗'} watch page labels full-length YouTube playback`)
   if (!fullVideoLabel) failed += 1
+
+  // Jimmy Tube owns its header and compact nav; the app chrome must not render there.
+  const tubeHtml = renderToString(
+    h(
+      MemoryRouter,
+      { initialEntries: ['/tools/tube'] },
+      h(LibraryProvider, null, h(PlayerProvider, null, h(DownloadsProvider, null, h(App)))),
+    ),
+  )
+  const noDoubleNav = tubeHtml.includes('class="tube-nav"') && !tubeHtml.includes('class="bottom-nav"')
+  console.log(`${noDoubleNav ? '  ✓' : '  ✗'} Jimmy Tube has one nav, not two`)
+  if (!noDoubleNav) failed += 1
 
   const hasNav = ['Home', 'Discover', 'Identify', 'Videos', 'Library'].every((l) => home.includes(l))
   console.log(`${hasNav ? '  ✓' : '  ✗'} bottom navigation renders all five items`)

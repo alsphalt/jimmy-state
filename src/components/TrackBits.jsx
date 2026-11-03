@@ -82,7 +82,7 @@ export function TrackTile({ track, showRank = false }) {
   )
 }
 
-export function TrackRow({ track, subtitle, trailing, showDownload = true, onRemove, rank }) {
+export function TrackRow({ track, subtitle, trailing, showDownload = true, onRemove, rank, onDownload }) {
   const a = useTrackActions(track)
   const navigate = useNavigate()
   return (
@@ -132,8 +132,8 @@ export function TrackRow({ track, subtitle, trailing, showDownload = true, onRem
             type="button"
             className="icon-btn"
             aria-label={`Download preview of ${a.track.title}`}
-            title="Download the authorized preview clip"
-            onClick={a.download}
+            title="Choose a download format"
+            onClick={onDownload ? () => onDownload(a.track) : a.download}
           >
             <IconDownload size={17} />
           </button>
