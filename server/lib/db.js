@@ -26,8 +26,45 @@ let pool = null
 let schemaPromise = null
 let lastError = null
 
+/**
+ * Cleans the value the host stores before it reaches the driver.
+ *
+ * Three paste mistakes are common and each fails in a confusing way:
+ *  - wrapping quotes, which Vercel keeps and Postgres then sees inside the password;
+ *  - a trailing newline from a copy;
+ *  - a password with characters that were never percent-encoded. A raw `#` is the worst
+ *    of these: the URL parser treats the rest as a fragment, so the password arrives
+ *    truncated and the server answers "password authentication failed" — which looks
+ *    like a wrong password rather than a formatting problem.
+ *
+ * Every rewrite is a no-op for a well-formed Neon string, so this cannot make a working
+ * connection stop working.
+ */
+export function normalizeDatabaseUrl(raw) {
+  let url = String(raw || '').trim().replace(/\s+/g, '')
+  url = url.replace(/^["'`]+/, '').replace(/["'`;]+$/, '')
+  if (!/^postgres(?:ql)?:\/\//i.test(url)) return url
+
+  const cut = url.indexOf('://') + 3
+  const scheme = url.slice(0, cut)
+  const rest = url.slice(cut)
+  const at = rest.lastIndexOf('@')
+  const colon = rest.indexOf(':')
+  if (at < 1 || colon < 0 || colon > at) return url
+
+  const user = rest.slice(0, colon)
+  const password = rest.slice(colon + 1, at)
+  const host = rest.slice(at + 1)
+  if (!password) return url
+  // Already encoded (%XX present) or nothing that needs encoding: leave untouched.
+  if (/%[0-9a-f]{2}/i.test(password)) return url
+  if (!/[^\w.~!*'()-]/.test(password)) return url
+
+  return `${scheme}${user}:${encodeURIComponent(password)}@${host}`
+}
+
 export function databaseUrl() {
-  return String(process.env.DATABASE_URL || process.env.POSTGRES_URL || '').trim()
+  return normalizeDatabaseUrl(process.env.DATABASE_URL || process.env.POSTGRES_URL || '')
 }
 
 export function databaseConfigured() {
@@ -232,6 +269,40 @@ export function hashKey(value) {
   return createHash('sha256').update(String(value)).digest('hex').slice(0, 32)
 }
 
+/**
+ * Turns a driver error into a code the public health endpoint can show safely. The raw
+ * text stays in the server log: it names the role, the host and sometimes the database,
+ * none of which belongs in an unauthenticated response.
+ */
+function classifyDbError(code, message) {
+  const text = String(message || '')
+  if (code === 'DB_TIMEOUT') {
+    return { code: 'timeout', hint: 'The database did not answer within 2.5s. Check the host and that the project is active.' }
+  }
+  if (/password authentication failed|authentication failed/i.test(text)) {
+    return {
+      code: 'auth_failed',
+      hint: 'The database rejected the credentials in DATABASE_URL. Copy the connection string again from Neon (Connect → the pooled host), or reset the role password in the Neon dashboard, then redeploy.',
+    }
+  }
+  if (/does not exist/i.test(text)) {
+    return { code: 'missing_database', hint: 'The database name in DATABASE_URL does not exist on that server.' }
+  }
+  if (/ENOTFOUND|getaddrinfo/i.test(text)) {
+    return { code: 'host_unresolved', hint: 'The host in DATABASE_URL could not be resolved. Check the string was copied whole.' }
+  }
+  if (/self.signed|unable to verify|certificate/i.test(text)) {
+    return { code: 'tls_failed', hint: 'TLS verification failed. Use the Neon pooler host, or set PG_SSL_NO_VERIFY=1 if your CA store cannot verify it.' }
+  }
+  if (/ECONNREFUSED/i.test(text)) {
+    return { code: 'refused', hint: 'The server refused the connection on that port.' }
+  }
+  if (/too many connections|remaining connection slots/i.test(text)) {
+    return { code: 'too_many_connections', hint: 'Connection limit reached. Use the Neon pooled (-pooler) host in DATABASE_URL.' }
+  }
+  return { code: 'unreachable', hint: 'The database could not be reached. The exact error is in the server log.' }
+}
+
 /** Diagnostics for /api/health. No host, no user, no password — only states. */
 export async function databaseStatus() {
   if (!databaseConfigured()) {
@@ -244,15 +315,13 @@ export async function databaseStatus() {
   const started = Date.now()
   const ping = await withTimeout(query('select 1 as ok'), 2500)
   if (!ping.ok) {
+    const problem = classifyDbError(ping.code, lastError)
     return {
       configured: true,
       reachable: false,
       latencyMs: Date.now() - started,
-      note:
-        ping.code === 'DB_TIMEOUT'
-          ? 'The database did not answer within 2.5s.'
-          : 'The database refused the connection. Check the connection string, TLS and that the schema is applied.',
-      error: ping.code === 'DB_TIMEOUT' ? 'timeout' : lastError,
+      code: problem.code,
+      note: problem.hint,
     }
   }
   // Apply the schema before counting it, so a fresh database reports honestly instead of

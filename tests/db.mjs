@@ -64,6 +64,26 @@ check('databaseConfigured() is true when set', db.databaseConfigured() === true)
 check('redact() also strips the live connection string', !db.redact(`boom ${secret}`).includes('hunter2'))
 process.env.DATABASE_URL = ''
 
+console.log('connection string normalisation')
+// Each of these is a value a host can actually end up storing after a copy-paste.
+const N = db.normalizeDatabaseUrl
+check('wrapping quotes are removed',
+  N('"postgresql://u:pw@h/db?sslmode=require"') === 'postgresql://u:pw@h/db?sslmode=require',
+  N('"postgresql://u:pw@h/db?sslmode=require"'))
+check('a trailing newline is removed',
+  N('postgresql://u:pw@h/db\n') === 'postgresql://u:pw@h/db')
+// A raw # would truncate the password at the URL parser and surface as a wrong password.
+check('an unencoded # in the password is encoded, not truncated',
+  N('postgresql://u:pa#ss@h/db') === 'postgresql://u:pa%23ss@h/db',
+  N('postgresql://u:pa#ss@h/db'))
+check('an unencoded @ in the password is encoded',
+  N('postgresql://u:pa@ss@h/db') === 'postgresql://u:pa%40ss@h/db')
+check('an already-encoded password is left exactly as it is',
+  N('postgresql://u:pa%23ss@h/db') === 'postgresql://u:pa%23ss@h/db')
+check('a plain string is unchanged',
+  N('postgresql://u:pw@h/db') === 'postgresql://u:pw@h/db')
+check('an empty value stays empty', N('') === '' && N(undefined) === '')
+
 console.log('schema and SQL (real postgres engine)')
 // PGlite is PostgreSQL compiled to WASM: same constraints, same ON CONFLICT semantics.
 // An emulator would not do here — the whole point is uniqueness and upsert behaviour.
