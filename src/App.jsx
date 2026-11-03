@@ -14,6 +14,7 @@ import Downloads from './pages/Downloads.jsx'
 import Search from './pages/Search.jsx'
 import SongDetails from './pages/SongDetails.jsx'
 import Settings from './pages/Settings.jsx'
+import Services from './pages/Services.jsx'
 import Privacy from './pages/Privacy.jsx'
 import TikTokLink from './pages/TikTokLink.jsx'
 import Playlists from './pages/Playlists.jsx'
@@ -53,6 +54,7 @@ export default function App() {
           <Route path="/search" element={<Page><Search /></Page>} />
           <Route path="/song/:key" element={<Page><SongDetails /></Page>} />
           <Route path="/settings" element={<Page><Settings /></Page>} />
+          <Route path="/services" element={<Page><Services /></Page>} />
           <Route path="/privacy" element={<Page><Privacy /></Page>} />
           <Route path="/tools/tiktok" element={<Page><TikTokLink /></Page>} />
           <Route path="*" element={<Page><NotFound /></Page>} />

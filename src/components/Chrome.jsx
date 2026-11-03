@@ -147,7 +147,7 @@ export function TopBar() {
           <Link to="/search" className="icon-btn" aria-label="Search">
             <IconSearch size={19} />
           </Link>
-          <Link to="/settings" className="icon-btn" aria-label="Settings">
+          <Link to="/services" className="icon-btn" aria-label="Services and storage">
             <IconSettings size={19} />
           </Link>
           <button
