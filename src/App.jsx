@@ -17,6 +17,7 @@ import Settings from './pages/Settings.jsx'
 import Services from './pages/Services.jsx'
 import Privacy from './pages/Privacy.jsx'
 import TikTokLink from './pages/TikTokLink.jsx'
+import JimmyTube from './pages/JimmyTube.jsx'
 import Playlists from './pages/Playlists.jsx'
 import PlaylistDetail from './pages/PlaylistDetail.jsx'
 import WatchLater from './pages/WatchLater.jsx'
@@ -57,6 +58,7 @@ export default function App() {
           <Route path="/services" element={<Page><Services /></Page>} />
           <Route path="/privacy" element={<Page><Privacy /></Page>} />
           <Route path="/tools/tiktok" element={<Page><TikTokLink /></Page>} />
+          <Route path="/tools/tube" element={<Page><JimmyTube /></Page>} />
           <Route path="*" element={<Page><NotFound /></Page>} />
         </Routes>
       </main>

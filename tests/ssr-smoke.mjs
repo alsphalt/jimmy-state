@@ -34,6 +34,7 @@ const ROUTES = [
   '/services',
   '/privacy',
   '/tools/tiktok',
+  '/tools/tube',
   '/playlists',
   '/watch-later',
   '/results/missing-id',

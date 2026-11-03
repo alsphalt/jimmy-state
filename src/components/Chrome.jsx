@@ -10,6 +10,7 @@ import {
   IconList,
   IconShield,
   IconTikTok,
+  IconTube,
   IconHome,
   IconLibrary,
   IconPause,
@@ -47,7 +48,10 @@ const DRAWER_SECTIONS = [
   },
   {
     title: 'Tools',
-    items: [{ to: '/tools/tiktok', label: 'TikTok link to video', Icon: IconTikTok }],
+    items: [
+      { to: '/tools/tiktok', label: 'TikTok link to video', Icon: IconTikTok },
+      { to: '/tools/tube', label: 'Jimmy Tube', Icon: IconTube },
+    ],
   },
   {
     title: 'App',

@@ -101,6 +101,13 @@ export const IconLink = (p) => (
 )
 
 /** Music-note mark — used for the TikTok tool. */
+export const IconTube = (p) => (
+  <Svg {...p}>
+    <rect x="2.6" y="5.2" width="18.8" height="13.6" rx="4" />
+    <path d="M10.4 9.6l4.6 2.4-4.6 2.4z" />
+  </Svg>
+)
+
 export const IconTikTok = (p) => (
   <Svg {...p}>
     <path d="M15 4v9.2a3.3 3.3 0 1 1-2.6-3.2" />
