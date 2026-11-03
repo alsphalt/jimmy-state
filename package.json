@@ -1,9 +1,9 @@
 {
   "name": "jimmy-state",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
-  "description": "JIMMY STATE \u2014 music recognition, discovery, video streaming and authorized downloads.",
+  "description": "JIMMY STATE — music recognition, discovery, video streaming and authorized downloads.",
   "scripts": {
     "dev": "concurrently -n api,web -c magenta,cyan \"node server/index.js\" \"vite\"",
     "dev:api": "node server/index.js",
