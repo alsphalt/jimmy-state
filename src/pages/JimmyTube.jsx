@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { readLink } from '../lib/links.js'
 import VideoCard from '../components/VideoCard.jsx'
 import { TrackRow } from '../components/TrackBits.jsx'
 import { Artwork, EmptyState, ErrorBlock, Loading } from '../components/ui.jsx'
@@ -44,6 +45,7 @@ const kindOf = (file) => {
 export default function JimmyTube() {
   const { t } = useTranslation()
   const [params, setParams] = useSearchParams()
+  const navigate = useNavigate()
   const tab = TABS.some((entry) => entry.id === params.get('tab')) ? params.get('tab') : 'home'
   const initialQ = params.get('q') || ''
 
@@ -55,6 +57,7 @@ export default function JimmyTube() {
   const [term, setTerm] = useState(initialQ)
   const [results, setResults] = useState({ loading: false, items: [], error: null, ran: false, mode: '', notice: '' })
   const [sheet, setSheet] = useState(null)
+  const [notice, setNotice] = useState('')
 
   const goTab = (next) => {
     const p = new URLSearchParams(params)
@@ -86,6 +89,21 @@ export default function JimmyTube() {
     event.preventDefault()
     const q = term.trim()
     if (!q) return
+    const link = readLink(q)
+    if (link?.kind === 'youtube') {
+      setNotice('')
+      navigate(`/watch/${link.id}`)
+      return
+    }
+    if (link?.kind === 'tiktok') {
+      setNotice('')
+      navigate(`/tools/tiktok?url=${encodeURIComponent(link.url)}`)
+      return
+    }
+    if (link?.kind === 'invalid') {
+      setNotice(link.note)
+      return
+    }
     const p = new URLSearchParams(params)
     p.set('q', q)
     p.delete('tab')
@@ -211,11 +229,16 @@ export default function JimmyTube() {
 
       {results.items.length > 0 && !results.loading && tab !== 'local' && tab !== 'settings' && (
         <div style={{ marginTop: 16 }}>
+          {notice ? (
+            <p className="tiny" style={{ color: 'var(--red)', marginBottom: 8 }}>
+              {notice}
+            </p>
+          ) : null}
           {results.notice && <p className="tiny mute" style={{ marginBottom: 8 }}>{results.notice}</p>}
           {results.mode === 'videos' ? (
             <div className="video-grid">
               {results.items.map((v) => (
-                <VideoCard key={v.videoId} video={v} />
+                <VideoCard key={v.videoId} video={v} onDownload={setSheet} />
               ))}
             </div>
           ) : (
