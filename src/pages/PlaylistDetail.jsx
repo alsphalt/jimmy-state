@@ -1,4 +1,5 @@
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { EmptyState } from '../components/ui.jsx'
 import { TrackRow } from '../components/TrackBits.jsx'
 import { IconArrowLeft, IconList, IconPlay, IconTrash } from '../components/Icons.jsx'
@@ -7,6 +8,7 @@ import { usePlayer } from '../context/PlayerContext.jsx'
 import { plural } from '../lib/format.js'
 
 export default function PlaylistDetail() {
+  const { t } = useTranslation()
   const { id } = useParams()
   const navigate = useNavigate()
   const { playlists, removeFromPlaylist, deletePlaylist } = useLibrary()
@@ -20,7 +22,7 @@ export default function PlaylistDetail() {
           <IconArrowLeft size={16} /> Playlists
         </Link>
         <div style={{ marginTop: 14 }}>
-          <EmptyState title="Playlist not found">It may have been deleted on this device.</EmptyState>
+          <EmptyState title={t('playlists.notFound')}>{t('playlists.notFoundBody')}</EmptyState>
         </div>
       </>
     )
@@ -66,11 +68,11 @@ export default function PlaylistDetail() {
           <IconList size={34} />
         </span>
         <div className="grow" style={{ minWidth: 0 }}>
-          <span className="eyebrow">Playlist</span>
+          <span className="eyebrow">{t('playlists.playlist')}</span>
           <h1 style={{ fontSize: 24, margin: '5px 0 4px' }} className="balance">
             {playlist.name}
           </h1>
-          <p className="tiny mute">{plural(playlist.items.length, 'track')}</p>
+          <p className="tiny mute">{t('common.trackCount', { count: playlist.items.length })}</p>
         </div>
       </div>
 

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { EmptyState, Segmented } from '../components/ui.jsx'
 import {
@@ -16,17 +17,8 @@ import { useLibrary, useToast } from '../context/LibraryContext.jsx'
 import { canPickDestination, openSavedFile, saveBlob } from '../lib/download.js'
 import { formatBytes, timeAgo } from '../lib/format.js'
 
-const STATUS_TEXT = {
-  queued: 'Queued',
-  resolving: 'Checking the source…',
-  downloading: 'Downloading',
-  saving: 'Writing to device…',
-  completed: 'Saved',
-  failed: 'Failed',
-  cancelled: 'Cancelled',
-}
-
 export default function Downloads() {
+  const { t } = useTranslation()
   const { downloads, start, cancel, retry, remove, activeCount } = useDownloads()
   const { toast } = useToast()
   const { db } = useLibrary()
@@ -90,10 +82,10 @@ export default function Downloads() {
     <>
       <div className="between" style={{ alignItems: 'flex-end' }}>
         <div>
-          <span className="eyebrow">Authorized media only</span>
-          <h1 style={{ marginTop: 4 }}>Downloads</h1>
+          <span className="eyebrow">{t('downloads.eyebrow')}</span>
+          <h1 style={{ marginTop: 4 }}>{t('downloads.title')}</h1>
         </div>
-        <span className="tiny mute">{activeCount ? `${activeCount} active` : `${downloads.length} records`}</span>
+        <span className="tiny mute">{activeCount ? t('downloads.activeCount', { count: activeCount }) : t('downloads.recordCount', { count: downloads.length })}</span>
       </div>
 
       <div className="notice notice-info" style={{ marginTop: 14 }}>
@@ -106,7 +98,7 @@ export default function Downloads() {
       </div>
 
       <div className="card card-pad" style={{ marginTop: 14 }}>
-        <span className="eyebrow">Save from a link</span>
+        <span className="eyebrow">{t('downloads.saveFromLink')}</span>
         <p className="tiny muted" style={{ margin: '6px 0 10px' }}>
           Paste an https link to a file you own, have permission to save, or that the provider publishes for download.
         </p>
@@ -157,7 +149,7 @@ export default function Downloads() {
 
       <div className="stack gap-10" style={{ marginTop: 14 }}>
         {filtered.length === 0 && (
-          <EmptyState icon={<IconDownload size={22} />} title="Nothing here yet">
+          <EmptyState icon={<IconDownload size={22} />} title={t('state.empty')}>
             Download a preview from any track, or paste an authorized link above. Progress, failures and retries all
             show up here.
           </EmptyState>
@@ -207,7 +199,7 @@ export default function Downloads() {
               <div className="dl-meta">
                 <span className="row gap-6">
                   <span className={`status-dot ${d.status}`} />
-                  {STATUS_TEXT[d.status] || d.status}
+                  {t(`downloads.status.${d.status}`, { defaultValue: d.status })}
                   {active && d.size ? ` · ${formatBytes(d.received || 0)} / ${formatBytes(d.size)}` : ''}
                 </span>
                 <span>
@@ -236,7 +228,7 @@ export default function Downloads() {
       </div>
 
       <div className="card card-pad" style={{ marginTop: 22 }}>
-        <span className="eyebrow">Storage &amp; permissions</span>
+        <span className="eyebrow">{t('downloads.storage')}</span>
         <ul className="tiny muted" style={{ paddingLeft: 18, margin: '8px 0 0', lineHeight: 1.7 }}>
           <li>No storage permission is requested up front. Nothing broad is asked for.</li>
           <li>

@@ -1,3 +1,15 @@
+import i18n from '../i18n/index.js'
+
+/**
+ * The locale the interface is currently in. Intl already knows how to write a date or
+ * a relative time in every one of the shipped languages, so these helpers ask it
+ * instead of concatenating English particles.
+ */
+function activeLocale() {
+  const fromDocument = typeof document !== 'undefined' ? document.documentElement.lang : ''
+  return fromDocument || i18n.language || undefined
+}
+
 export function formatBytes(bytes, decimals = 1) {
   const n = Number(bytes)
   if (!n || n < 0) return '—'
@@ -31,19 +43,25 @@ export function timeAgo(iso) {
   if (!then) return ''
   const diff = Date.now() - then
   const min = Math.round(diff / 60000)
-  if (min < 1) return 'just now'
-  if (min < 60) return `${min}m ago`
-  const hours = Math.round(min / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.round(hours / 24)
-  if (days < 7) return `${days}d ago`
-  return new Date(then).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  if (min < 1) return i18n.t('common.justNow')
+  const locale = activeLocale()
+  try {
+    const relative = new Intl.RelativeTimeFormat(locale, { numeric: 'auto', style: 'short' })
+    if (min < 60) return relative.format(-min, 'minute')
+    const hours = Math.round(min / 60)
+    if (hours < 24) return relative.format(-hours, 'hour')
+    const days = Math.round(hours / 24)
+    if (days < 7) return relative.format(-days, 'day')
+  } catch {
+    // very old engines: fall through to a plain date
+  }
+  return new Date(then).toLocaleDateString(locale, { month: 'short', day: 'numeric' })
 }
 
 export function formatDate(iso) {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+  return d.toLocaleDateString(activeLocale(), { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 export function initials(text) {

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import LogoD from './LogoD.jsx'
 import { IconAlert, IconMic, IconX } from './Icons.jsx'
@@ -11,6 +12,7 @@ const AUTO_STOP_SECONDS = 10
 
 export default function Recognizer({ hero = false }) {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const { addIdentification } = useLibrary()
   const { toast } = useToast()
 
@@ -238,19 +240,19 @@ export default function Recognizer({ hero = false }) {
       <div className="rec-status" id="rec-status" aria-live="polite">
         {phase === 'idle' && (
           <>
-            <strong>Identify Any Song</strong>
-            <p>Tap the D and hold your phone near the music. We listen for 10 seconds.</p>
+            <strong>{t('identify.pageTitle')}</strong>
+            <p>{t('identify.hint')}</p>
           </>
         )}
         {phase === 'starting' && (
           <>
-            <strong>Microphone…</strong>
-            <p>Allow microphone access when your browser asks.</p>
+            <strong>{t('identify.micTitle')}</strong>
+            <p>{t('identify.micBody')}</p>
           </>
         )}
         {listening && (
           <>
-            <strong>Listening…</strong>
+            <strong>{t('identify.listening')}</strong>
             <p>{detail}</p>
             <span className="rec-timer">{elapsed.toFixed(1)}s / {AUTO_STOP_SECONDS}s</span>
           </>

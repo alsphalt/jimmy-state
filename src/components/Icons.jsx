@@ -236,3 +236,21 @@ export const IconWifi = (p) => (
     <circle cx="12" cy="19.2" r="0.9" fill="currentColor" stroke="none" />
   </Svg>
 )
+
+export const IconGlobe = (p) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M3.2 9h17.6M3.2 15h17.6" />
+    <path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18z" />
+  </Svg>
+)
+
+export const IconLanguage = (p) => (
+  <Svg {...p}>
+    <path d="M4 5.5h8.5M8.2 3.6v1.9" />
+    <path d="M10.6 5.5c-.4 4-2.4 6.9-6.2 8.9" />
+    <path d="M5.4 10.2c1.2 2 3 3.5 5.4 4.4" />
+    <path d="M13.4 20.4l3.6-8.6 3.6 8.6" />
+    <path d="M14.7 17.5h4.6" />
+  </Svg>
+)

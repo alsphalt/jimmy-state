@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Solid brand background for the adaptive icon. A flat colour is intentional:
+     the mark itself carries the accent, and a flat plate keeps the icon legible
+     on every launcher grid. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/ic_launcher_background" />
+</shape>

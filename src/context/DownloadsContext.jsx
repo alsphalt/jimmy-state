@@ -2,6 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useRef } from 'react
 import { useLibrary, useToast } from './LibraryContext.jsx'
 import { resolveSource, fetchWithProgress, saveBlob } from '../lib/download.js'
 import { normalizeTrack } from '../lib/track.js'
+import { isNativeApp } from '../lib/platform.js'
+import { notify } from '../lib/native.js'
 
 const DownloadsContext = createContext(null)
 
@@ -104,20 +106,32 @@ export function DownloadsProvider({ children }) {
             fileName: saved.fileName,
             method: saved.method,
             handle: saved.handle || null,
+            uri: saved.uri || null,
+            location: saved.location || null,
             completedAt: new Date().toISOString(),
             error: null,
           },
           true,
         )
+        const nativeSave = String(saved.method || '').startsWith('native')
         toast('Download complete', {
           title: saved.fileName,
-          message:
-            saved.method === 'picker'
+          message: nativeSave
+            ? `Saved to ${saved.location}.`
+            : saved.method === 'picker'
               ? 'Saved to the folder you chose.'
               : 'Handed to your browser download manager — check your Downloads folder.',
           type: 'ok',
           ttl: 6000,
         })
+        // On a phone the user has usually switched apps by the time a file lands, so a
+        // toast alone would be missed. The notification carries the real location.
+        if (isNativeApp()) {
+          notify({
+            title: 'Download complete',
+            body: `${track.artist ? `${track.artist} — ` : ''}${track.title || saved.fileName} saved to ${saved.location}.`,
+          }).catch(() => undefined)
+        }
       } catch (err) {
         const aborted = err?.code === 'ABORTED' || err?.name === 'AbortError' || controller.signal.aborted
         const cancelledByUser = err?.code === 'SAVE_CANCELLED'

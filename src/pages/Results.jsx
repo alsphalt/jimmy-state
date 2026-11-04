@@ -1,4 +1,5 @@
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { MatchSections } from '../components/TrackBits.jsx'
 import { EmptyState } from '../components/ui.jsx'
 import { IconArrowLeft, IconExternal, IconTrash } from '../components/Icons.jsx'
@@ -6,6 +7,7 @@ import { useLibrary, useToast } from '../context/LibraryContext.jsx'
 import { formatDate } from '../lib/format.js'
 
 export default function Results() {
+  const { t } = useTranslation()
   const { id } = useParams()
   const location = useLocation()
   const { identifications, removeIdentification } = useLibrary()
@@ -17,7 +19,7 @@ export default function Results() {
     return (
       <>
         <BackRow />
-        <EmptyState title="That identification is not on this device">
+        <EmptyState title={t('results.notOnDevice')}>
           Results are stored locally. They may have been removed, or this link came from another device.
           <div style={{ marginTop: 12 }}>
             <Link to="/identify" className="btn btn-sm btn-primary">
@@ -48,7 +50,7 @@ export default function Results() {
               target="_blank"
               rel="noreferrer noopener"
               aria-label="Search this track on YouTube"
-              title="Search on YouTube"
+              title={t('results.searchYouTube')}
             >
               <IconExternal size={18} />
             </a>
@@ -60,7 +62,7 @@ export default function Results() {
       />
 
       <div className="row gap-8 wrap" style={{ marginBottom: 10 }}>
-        <span className="eyebrow">{location.state?.fresh ? 'Just identified' : 'Saved identification'}</span>
+        <span className="eyebrow">{location.state?.fresh ? t('results.justIdentified') : t('results.savedIdentification')}</span>
         <span className="tiny mute">· {formatDate(record.at)}</span>
         <span className="tiny mute">· {total} results</span>
       </div>
@@ -76,10 +78,11 @@ export default function Results() {
 }
 
 function BackRow({ right }) {
+  const { t } = useTranslation()
   return (
     <div className="between" style={{ marginBottom: 12 }}>
-      <Link to="/" className="btn btn-sm btn-ghost" aria-label="Back to home">
-        <IconArrowLeft size={16} /> Back
+      <Link to="/" className="btn btn-sm btn-ghost" aria-label={t('nav.homeLabel')}>
+        <IconArrowLeft size={16} /> {t('common.back')}
       </Link>
       <div className="row gap-6">{right}</div>
     </div>

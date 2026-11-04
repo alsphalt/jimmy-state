@@ -56,6 +56,8 @@ try {
   const { LibraryProvider } = await vite.ssrLoadModule('/src/context/LibraryContext.jsx')
   const { PlayerProvider } = await vite.ssrLoadModule('/src/context/PlayerContext.jsx')
   const { DownloadsProvider } = await vite.ssrLoadModule('/src/context/DownloadsContext.jsx')
+  // Settings reads the active language, so the harness mirrors main.jsx and mounts it.
+  const { LanguageProvider } = await vite.ssrLoadModule('/src/i18n/LanguageProvider.jsx')
   const { default: App } = await vite.ssrLoadModule('/src/App.jsx')
 
   const { createElement: h } = React
@@ -65,7 +67,7 @@ try {
       const tree = h(
         MemoryRouter,
         { initialEntries: [route] },
-        h(LibraryProvider, null, h(PlayerProvider, null, h(DownloadsProvider, null, h(App)))),
+        h(LanguageProvider, null, h(LibraryProvider, null, h(PlayerProvider, null, h(DownloadsProvider, null, h(App))))),
       )
       const html = renderToString(tree)
       // Jimmy Tube shows its own brand instead of the app header, on purpose.

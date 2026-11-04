@@ -132,6 +132,42 @@ try {
   check('manifest declares the D icons', (await (await fetch(`${BASE}/manifest.webmanifest`)).text()).includes('icon-512.png'))
   check('deep link falls back to the shell', (await (await fetch(`${BASE}/library`)).text()).includes('<div id="root">'))
 
+  // The design face is self-hosted, so it has to leave the server as a font or the
+  // page silently falls back to the device's own typeface.
+  const font = await fetch(`${BASE}/fonts/inter-latin-var.woff2`)
+  check(
+    'the Inter font is served as a font',
+    font.ok && (font.headers.get('content-type') || '').includes('font/woff2'),
+    `status ${font.status} type ${font.headers.get('content-type')}`,
+  )
+  const stylesheet = html.match(/href="(\/assets\/[^"]+\.css)"/)?.[1]
+  check('the built stylesheet is linked from the shell', Boolean(stylesheet))
+  if (stylesheet) {
+    const css = await fetch(`${BASE}${stylesheet}`)
+    const text = await css.text()
+    check(
+      'the stylesheet is real CSS with the design tokens',
+      (css.headers.get('content-type') || '').includes('text/css') &&
+        text.includes('--bg: #04050a') &&
+        text.includes('font-family:Inter') &&
+        text.includes('inter-latin-var.woff2'),
+    )
+  }
+  // A missing asset must never be answered with the HTML shell: with nosniff the
+  // browser refuses it, and the whole app renders unstyled instead of one 404.
+  const goneAsset = await fetch(`${BASE}/assets/does-not-exist.css`)
+  check(
+    'a missing asset is not answered with the SPA shell',
+    !(goneAsset.headers.get('content-type') || '').includes('text/html'),
+    `status ${goneAsset.status} type ${goneAsset.headers.get('content-type')}`,
+  )
+  const swStamp = await sw.text()
+  check(
+    'the service worker cache version is stamped by the build',
+    !swStamp.includes('__BUILD_ID__'),
+    'VERSION still holds the build placeholder',
+  )
+
   console.log('\nsecrets & input handling')
   const envProbe = await fetch(`${BASE}/.env`)
   check('/.env is not publicly served', envProbe.status === 404)

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Artwork, EmptyState, PlatformLinks } from '../components/ui.jsx'
 import { parseVideoId } from '../components/YouTubePlayer.jsx'
@@ -22,6 +23,7 @@ import { formatDate, formatDuration, timeAgo } from '../lib/format.js'
 import { trackKey } from '../lib/track.js'
 
 export default function SongDetails() {
+  const { t } = useTranslation()
   const { key } = useParams()
   const location = useLocation()
   const { favourites, identifications, playlists, addToPlaylist, createPlaylist } = useLibrary()
@@ -92,7 +94,7 @@ export default function SongDetails() {
           <IconArrowLeft size={16} /> Library
         </Link>
         <div style={{ marginTop: 14 }}>
-          <EmptyState title="Track not found">Open a track from your library, a search result or an identification.</EmptyState>
+          <EmptyState title={t('song.notFound')}>{t('song.notFoundBody')}</EmptyState>
         </div>
       </>
     )
@@ -167,7 +169,7 @@ export default function SongDetails() {
             rel="noreferrer noopener"
             title="Open the full song in the provider"
           >
-            <IconExternal size={16} /> Hear full song
+            <IconExternal size={16} /> {t('common.fullSong')}
           </a>
         ) : null}
         <button type="button" className="btn" onClick={a.play} disabled={!a.track.previewUrl}>
@@ -211,7 +213,7 @@ export default function SongDetails() {
         <div className="card" style={{ marginTop: 14, padding: 14 }}>
           <div className="row gap-8" style={{ alignItems: 'center' }}>
             <IconAlert size={16} />
-            <strong style={{ fontSize: 14 }}>Full track cannot be resolved here</strong>
+            <strong style={{ fontSize: 14 }}>{t('song.fullTrackUnavailable')}</strong>
           </div>
           <p className="small muted" style={{ marginTop: 8 }}>{fullError}</p>
           <p className="tiny mute" style={{ marginTop: 6 }}>
@@ -258,7 +260,7 @@ export default function SongDetails() {
 
       <div className="grid-2" style={{ marginTop: 18 }}>
         <div className="card card-pad">
-          <span className="eyebrow">Add to playlist</span>
+          <span className="eyebrow">{t('song.addToPlaylist')}</span>
           {playlists.length > 0 ? (
             <div className="list" style={{ marginTop: 8 }}>
               {playlists.map((p) => (
@@ -302,37 +304,37 @@ export default function SongDetails() {
         </div>
 
         <div className="card card-pad">
-          <span className="eyebrow">Track data</span>
+          <span className="eyebrow">{t('song.trackData')}</span>
           <div className="kv">
-            <span>Artist</span>
+            <span>{t('song.artist')}</span>
             <b className="truncate">{a.track.artist}</b>
           </div>
           <div className="kv">
-            <span>Album</span>
+            <span>{t('song.album')}</span>
             <b className="truncate">{a.track.album || '—'}</b>
           </div>
           <div className="kv">
-            <span>Released</span>
+            <span>{t('song.released')}</span>
             <b>{a.track.releaseDate ? formatDate(a.track.releaseDate) : '—'}</b>
           </div>
           <div className="kv">
-            <span>Genre</span>
+            <span>{t('song.genre')}</span>
             <b>{a.track.genre || '—'}</b>
           </div>
           <div className="kv">
-            <span>Preview</span>
-            <b>{a.track.previewUrl ? 'Preview clip' : 'Not published'}</b>
+            <span>{t('song.previewLabel')}</span>
+            <b>{a.track.previewUrl ? t('song.previewLabel') : t('song.noPreview')}</b>
           </div>
           <div className="kv">
             <span>ISRC</span>
             <b className="truncate">{a.track.isrc || '—'}</b>
           </div>
           <div className="kv">
-            <span>Label</span>
+            <span>{t('song.label')}</span>
             <b className="truncate">{a.track.label || meta.label || '—'}</b>
           </div>
           <div className="kv">
-            <span>Sources</span>
+            <span>{t('song.sources')}</span>
             <b>{(a.track.providers?.length ? a.track.providers : [a.track.source || 'catalogue']).join(', ')}</b>
           </div>
         </div>
@@ -342,7 +344,7 @@ export default function SongDetails() {
         <div className="card card-pad" style={{ marginTop: 14 }}>
           {links.length > 0 && (
             <>
-              <span className="eyebrow">Listen on</span>
+              <span className="eyebrow">{t('song.listenOn')}</span>
               <div className="row wrap gap-8" style={{ marginTop: 8 }}>
                 {links.map((link) => (
                   <a
@@ -389,7 +391,7 @@ export default function SongDetails() {
         <div className="card card-pad" style={{ marginTop: 14 }}>
           <div className="between">
             <div>
-              <span className="eyebrow">Identification</span>
+              <span className="eyebrow">{t('song.identification')}</span>
               <p className="small muted" style={{ marginTop: 4 }}>
                 Matched {timeAgo(identified.at)} · {1 + identified.similar.length + identified.possible.length} results
               </p>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import Recognizer from '../components/Recognizer.jsx'
 import { TrackTile } from '../components/TrackBits.jsx'
@@ -14,6 +15,7 @@ const STEPS = [
 ]
 
 export default function Identify() {
+  const { t } = useTranslation()
   const { identifications } = useLibrary()
   const [health, setHealth] = useState(null)
 
@@ -36,9 +38,9 @@ export default function Identify() {
   return (
     <>
       <div className="row gap-10" style={{ marginBottom: 4 }}>
-        <span className="eyebrow">Recognition</span>
+        <span className="eyebrow">{t('identify.eyebrow')}</span>
       </div>
-      <h1 style={{ marginBottom: 14 }}>Identify Any Song</h1>
+      <h1 style={{ marginBottom: 14 }}>{t('identify.pageTitle')}</h1>
 
       {health?.offline && (
         <div className="notice" style={{ marginBottom: 12 }}>
@@ -74,7 +76,7 @@ export default function Identify() {
       <div className="grid-2" style={{ marginTop: 16 }}>
         {STEPS.map(([title, body], i) => (
           <div key={title} className="card card-pad">
-            <span className="eyebrow">Step {i + 1}</span>
+            <span className="eyebrow">{t('identify.step', { n: i + 1 })}</span>
             <h3 style={{ margin: '6px 0 5px', fontSize: 15 }}>{title}</h3>
             <p className="tiny muted">{body}</p>
           </div>
@@ -92,7 +94,7 @@ export default function Identify() {
       {identifications.length > 0 && (
         <section className="section">
           <div className="section-head">
-            <h2>Last matches</h2>
+            <h2>{t('identify.lastMatches')}</h2>
             <Link to="/library?tab=identified" className="section-link">
               Library <IconChevron size={14} />
             </Link>

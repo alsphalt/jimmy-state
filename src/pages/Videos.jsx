@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import VideoCard from '../components/VideoCard.jsx'
 import { EmptyState, ErrorBlock, Loading, Section, Segmented } from '../components/ui.jsx'
@@ -7,6 +8,7 @@ import { api } from '../lib/api.js'
 import { useLibrary } from '../context/LibraryContext.jsx'
 
 export default function Videos() {
+  const { t } = useTranslation()
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const { watched, watchLater, savedVideoIds } = useLibrary()
@@ -68,7 +70,7 @@ export default function Videos() {
 
   return (
     <>
-      <h1>Videos</h1>
+      <h1>{t('videos.title')}</h1>
       <p className="small muted" style={{ marginTop: 4, marginBottom: 14 }}>
         Stream inside the app. Watching never downloads a file.
       </p>
@@ -121,7 +123,7 @@ export default function Videos() {
           {source === 'youtube' && !results.configured ? (
             <>
               <div className="card card-pad">
-                <span className="eyebrow">Setup</span>
+                <span className="eyebrow">{t('common.setup')}</span>
                 <h3 style={{ margin: '6px 0 8px' }}>YouTube search needs an API key</h3>
                 <p className="small muted" style={{ marginBottom: 10 }}>
                   {results.error}
@@ -136,7 +138,7 @@ export default function Videos() {
                 </p>
               </div>
               <div className="card card-pad" style={{ marginTop: 12 }}>
-                <span className="eyebrow">Play a known video</span>
+                <span className="eyebrow">{t('videos.knownVideo')}</span>
                 <p className="tiny muted" style={{ margin: '6px 0 10px' }}>
                   Paste a YouTube link or 11-character id.
                 </p>
@@ -162,7 +164,7 @@ export default function Videos() {
 
       {!results.loading && !results.error && results.ran && results.items.length === 0 && (
         <div style={{ marginTop: 16 }}>
-          <EmptyState icon={<IconVideo size={22} />} title="No videos matched">
+          <EmptyState icon={<IconVideo size={22} />} title={t('videos.noMatch')}>
             Try a different title, artist or keyword{source === 'catalog' ? ', or switch to YouTube' : ''}.
           </EmptyState>
         </div>
@@ -171,7 +173,7 @@ export default function Videos() {
       {results.items.length > 0 && (
         <div style={{ marginTop: 16 }}>
           <div className="section-head">
-            <h2 style={{ fontSize: 16 }}>Results</h2>
+            <h2 style={{ fontSize: 16 }}>{t('common.results')}</h2>
             <span className="tiny mute">
               {results.items.length} {source === 'catalog' ? 'music videos' : 'videos'}
             </span>
@@ -185,7 +187,7 @@ export default function Videos() {
       )}
 
       {watched.length > 0 && (
-        <Section title="Recently watched" to="/watch-later" actionLabel="Watch Later">
+        <Section title={t('videos.recentlyWatched')} to="/watch-later" actionLabel={t('nav.watchLater')}>
           <div className="hscroll">
             {watched.slice(0, 8).map((w) => (
               <div key={w.videoId} style={{ width: 210 }}>
@@ -197,7 +199,7 @@ export default function Videos() {
       )}
 
       {watchLater.length > 0 && (
-        <Section title="Watch Later" to="/watch-later">
+        <Section title={t('nav.watchLater')} to="/watch-later">
           <div className="hscroll">
             {watchLater.slice(0, 8).map((w) => (
               <div key={w.videoId} style={{ width: 210 }}>

@@ -1,17 +1,19 @@
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { IconChevron, IconShield } from '../components/Icons.jsx'
 import { storageBackend } from '../lib/db.js'
 
 export default function Privacy() {
+  const { t } = useTranslation()
   return (
     <>
       <div className="row gap-8" style={{ marginBottom: 8 }}>
         <IconShield size={18} />
-        <span className="eyebrow">Privacy &amp; data</span>
+        <span className="eyebrow">{t('privacy.eyebrow')}</span>
       </div>
-      <h1>Your data, on your device.</h1>
+      <h1>{t('privacy.headline')}</h1>
       <p className="small muted" style={{ marginTop: 6, marginBottom: 16 }}>
-        JIMMY STATE has no accounts and no analytics. Here is exactly what stays local and what leaves your device.
+        {t('privacy.subtitle')}
       </p>
 
       <div className="card card-pad">
