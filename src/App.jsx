@@ -68,7 +68,7 @@ export default function App() {
           <Route path="/services" element={<Page><Services /></Page>} />
           <Route path="/privacy" element={<Page><Privacy /></Page>} />
           <Route path="/tools/tiktok" element={<Page><TikTokLink /></Page>} />
-          <Route path="/tools/tube" element={<Page><JimmyTube /></Page>} />
+          <Route path="/tools/tube" element={<Page className="page-tube"><JimmyTube /></Page>} />
           <Route path="/tools/system" element={<Page><System /></Page>} />
           <Route path="*" element={<Page><NotFound /></Page>} />
         </Routes>

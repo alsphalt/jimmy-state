@@ -1618,3 +1618,85 @@ body.drawer-open {
   color: var(--text-mute);
   font-size: 13px;
 }
+
+/* ==========================================================================
+   Jimmy Tube shell: one scrolling pane, one stationary nav.
+
+   A fixed nav still drifts on Android when the browser hides its address bar,
+   because the visual viewport changes height. So the screen is a full-height
+   column instead: the content scrolls inside .tube-scroll and the nav is a
+   flex row after it, which cannot move and cannot cover the content.
+   ========================================================================== */
+/* Pinned to the viewport rather than sized with 100dvh: an install banner or an update
+   bar above it cannot push the nav off screen, and the nav cannot drift when the
+   browser hides its address bar. */
+.page-tube {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* page-in ends on a transform, which would make fixed children scroll with it */
+  animation: none;
+}
+
+.page-tube .tube-head {
+  padding-top: calc(10px + env(safe-area-inset-top));
+}
+
+.page-tube > .tube-app {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0;
+}
+
+.tube-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 12px;
+}
+
+/* Overrides the earlier fixed positioning: the nav is a flex row now. */
+.tube-nav {
+  position: static;
+  flex: none;
+  z-index: auto;
+  width: 100%;
+  padding: 6px 12px calc(6px + env(safe-area-inset-bottom));
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+}
+
+/* The global preview player floats at var(--nav-h) from the bottom; inside the
+   Tube it must clear the nav's real height instead of overlapping it. */
+.page-tube ~ .player-bar,
+.app:has(.page-tube) .player-bar {
+  bottom: calc(62px + env(safe-area-inset-bottom));
+}
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 14px 0 10px;
+  margin-bottom: 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 650;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.back-btn:hover { color: var(--text); border-color: var(--line-strong); }
+.back-btn:active { transform: scale(0.97); }

@@ -183,16 +183,18 @@ export function TopBar() {
 }
 
 export function InstallBanner() {
+  const location = useLocation()
   const { t } = useTranslation()
   const { showBanner, install, dismiss, busy } = useInstallPrompt()
   const [closing, setClosing] = useState(false)
   const [mounted, setMounted] = useState(showBanner)
+  const onTube = location.pathname.startsWith('/tools/tube')
 
   useEffect(() => {
     if (showBanner) setMounted(true)
   }, [showBanner])
 
-  if (!mounted || (!showBanner && !closing)) return null
+  if (onTube || !mounted || (!showBanner && !closing)) return null
 
   const close = () => {
     setClosing(true)
@@ -244,6 +246,7 @@ export function InstallBanner() {
  * through Settings → App update instead.
  */
 export function UpdateBar() {
+  const location = useLocation()
   const { t } = useTranslation()
   const [ready, setReady] = useState(false)
 
@@ -253,7 +256,8 @@ export function UpdateBar() {
     return () => window.removeEventListener('jimmy-state:update-ready', onReady)
   }, [])
 
-  if (!ready) return null
+  const onTube = location.pathname.startsWith('/tools/tube')
+  if (onTube || !ready) return null
 
   return (
     <div className="shell">

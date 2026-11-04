@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import VideoCard from '../components/VideoCard.jsx'
 import { EmptyState, ErrorBlock, Loading, Section, Segmented } from '../components/ui.jsx'
-import { IconClock, IconExternal, IconPlay, IconSearch, IconVideo } from '../components/Icons.jsx'
+import { IconArrowLeft, IconClock, IconExternal, IconPlay, IconSearch, IconVideo } from '../components/Icons.jsx'
 import { api } from '../lib/api.js'
 import { useLibrary } from '../context/LibraryContext.jsx'
 
@@ -68,8 +68,20 @@ export default function Videos() {
     navigate(`/watch/${id}`)
   }
 
+  // React Router keeps an index of this tab's entries; 0 means the page was the first
+  // thing opened, so going back would leave the app instead of returning to it.
+  const goBack = () => {
+    const idx = window.history.state?.idx
+    if (typeof idx === 'number' && idx > 0) navigate(-1)
+    else navigate('/', { replace: true })
+  }
+
   return (
     <>
+      <button type="button" className="back-btn" onClick={goBack} aria-label={t('common.back', 'Back')}>
+        <IconArrowLeft size={16} />
+        <span>{t('common.back', 'Back')}</span>
+      </button>
       <h1>{t('videos.title')}</h1>
       <p className="small muted" style={{ marginTop: 4, marginBottom: 14 }}>
         Stream inside the app. Watching never downloads a file.

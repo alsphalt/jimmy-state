@@ -137,7 +137,8 @@ export default function JimmyTube() {
 
   return (
     <div className="tube-app">
-      <header className="tube-head">
+      <div className="tube-scroll">
+        <header className="tube-head">
         <div className="tube-brand">
           <span className="tube-logo" aria-hidden="true">
             <IconTube size={19} />
@@ -321,6 +322,7 @@ export default function JimmyTube() {
       {tab === 'settings' && <SettingsPanel prefs={prefs} />}
 
       <FootNote />
+      </div>
       <TubeNav tab={tab} onTab={goTab} />
       {sheet && <FormatSheet item={sheet} downloads={downloads} onClose={() => setSheet(null)} />}
     </div>
