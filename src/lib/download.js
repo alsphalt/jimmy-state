@@ -1,4 +1,6 @@
 import { api } from './api.js'
+import { isNativeApp } from './platform.js'
+import { saveFileNative } from './native.js'
 
 /**
  * Device file saving.
@@ -136,6 +138,14 @@ export async function fetchWithProgress(
  * @returns {{method:'picker'|'browser', fileName:string, handle?:FileSystemFileHandle}}
  */
 export async function saveBlob(blob, fileName) {
+  // Inside the APK there is no browser download manager: the anchor fallback below would
+  // hand the blob to a WebView that simply ignores the `download` attribute, and the user
+  // would see a "saved" record with no file. Write through the native filesystem instead.
+  if (isNativeApp()) {
+    const saved = await saveFileNative(blob, fileName, blob.type)
+    return { ...saved, fileName, mime: blob.type || '' }
+  }
+
   if (canPickDestination()) {
     try {
       const handle = await window.showSaveFilePicker({

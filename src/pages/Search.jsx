@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Artwork, EmptyState, ErrorBlock, Loading, Segmented } from '../components/ui.jsx'
 import { TrackRow } from '../components/TrackBits.jsx'
@@ -20,6 +21,7 @@ const MODES = [
 ]
 
 export default function Search() {
+  const { t } = useTranslation()
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
   const [link, setLink] = useState('')
@@ -128,7 +130,7 @@ export default function Search() {
 
   return (
     <>
-      <h1>Search</h1>
+      <h1>{t('search.title')}</h1>
       <form onSubmit={submit} role="search" style={{ marginTop: 10 }}>
         <label className="field">
           <IconSearch size={18} className="field-icon" />
@@ -158,9 +160,9 @@ export default function Search() {
       {!initialQ && searches.length > 0 && (
         <section style={{ marginTop: 16 }}>
           <div className="between" style={{ marginBottom: 8 }}>
-            <span className="eyebrow">Recent searches</span>
+            <span className="eyebrow">{t('search.recent')}</span>
             <button type="button" className="section-link" onClick={clearSearches}>
-              <IconTrash size={13} /> Clear
+              <IconTrash size={13} /> {t('common.clear')}
             </button>
           </div>
           <div className="row wrap gap-8">
@@ -240,7 +242,7 @@ export default function Search() {
 
       {!state.loading && !state.error && state.ran && state.items.length === 0 && (
         <div style={{ marginTop: 18 }}>
-          <EmptyState title="No results">Nothing matched that query in this mode. Try another spelling or switch modes.</EmptyState>
+          <EmptyState title={t('search.noResults')}>{t('search.noResultsBody')}</EmptyState>
         </div>
       )}
 
@@ -326,7 +328,7 @@ export default function Search() {
 
       {!state.ran && mode !== 'library' && mode !== 'downloads' && (
         <div style={{ marginTop: 20 }}>
-          <EmptyState icon={<IconSearch size={22} />} title="Search the catalogue">
+          <EmptyState icon={<IconSearch size={22} />} title={t('search.searchCatalogue')}>
             {identifications.length > 0
               ? 'Try an artist from your identified songs, or search a mood.'
               : 'Type a song, artist, album or video keyword and press search.'}

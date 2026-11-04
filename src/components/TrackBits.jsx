@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { Artwork, PlatformLinks } from './ui.jsx'
 import { IconDownload, IconHeart, IconPause, IconPlay, IconChevron, IconTrash } from './Icons.jsx'
@@ -167,12 +168,13 @@ export function TrackRow({ track, subtitle, trailing, showDownload = true, onRem
 }
 
 export function MatchSections({ results }) {
+  const { t } = useTranslation()
   if (!results?.exact) return null
   const { exact, similar = [], possible = [] } = results
   return (
     <>
       <div className="hero-match card card-glow">
-        <span className="badge badge-exact">Verified match</span>
+        <span className="badge badge-exact">{t('results.exact')}</span>
         <Artwork src={exact.artwork} alt={`${exact.title} by ${exact.artist}`} style={{ borderRadius: 24 }} />
         <div className="stack" style={{ gap: 3 }}>
           <h1 className="balance">{exact.title}</h1>
@@ -187,7 +189,7 @@ export function MatchSections({ results }) {
         </div>
         {typeof exact.confidence === 'number' && (
           <div className="confidence">
-            <span>Confidence</span>
+            <span>{t('results.confidence')}</span>
             <i>
               <b style={{ width: `${Math.round(exact.confidence * 100)}%` }} />
             </i>
@@ -201,13 +203,13 @@ export function MatchSections({ results }) {
       {similar.length > 0 && (
         <section>
           <div className="group-head">
-            <span className="badge badge-similar">Similar songs</span>
+            <span className="badge badge-similar">{t('results.similar')}</span>
             <span className="group-count">{similar.length}</span>
             <span className="group-rule" />
           </div>
           <div className="list">
-            {similar.map((t) => (
-              <TrackRow key={t.key} track={t} subtitle={`${t.artist}${t.album ? ` · ${t.album}` : ''}`} />
+            {similar.map((item) => (
+              <TrackRow key={item.key} track={item} subtitle={`${item.artist}${item.album ? ` · ${item.album}` : ''}`} />
             ))}
           </div>
         </section>
@@ -216,7 +218,7 @@ export function MatchSections({ results }) {
       {possible.length > 0 && (
         <section>
           <div className="group-head">
-            <span className="badge badge-possible">Possible matches</span>
+            <span className="badge badge-possible">{t('results.possible')}</span>
             <span className="group-count">{possible.length}</span>
             <span className="group-rule" />
           </div>
@@ -224,8 +226,8 @@ export function MatchSections({ results }) {
             Same title or close metadata, different recordings. These are recommendations, not verified identifications.
           </p>
           <div className="list">
-            {possible.map((t) => (
-              <TrackRow key={t.key} track={t} subtitle={`${t.artist}${t.album ? ` · ${t.album}` : ''}`} />
+            {possible.map((item) => (
+              <TrackRow key={item.key} track={item} subtitle={`${item.artist}${item.album ? ` · ${item.album}` : ''}`} />
             ))}
           </div>
         </section>

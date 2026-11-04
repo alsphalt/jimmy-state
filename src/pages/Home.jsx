@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Artwork, EmptyState, Section } from '../components/ui.jsx'
 import { TrackTile, useTrackActions } from '../components/TrackBits.jsx'
 import {
@@ -8,6 +9,7 @@ import {
   IconHeart,
   IconLibrary,
   IconMic,
+  IconPause,
   IconPlay,
   IconSearch,
   IconVideo,
@@ -16,24 +18,15 @@ import { useLibrary } from '../context/LibraryContext.jsx'
 import { api } from '../lib/api.js'
 import { formatBytes, timeAgo } from '../lib/format.js'
 
-const STATUS_LABEL = {
-  completed: 'Saved',
-  downloading: 'Downloading',
-  failed: 'Failed',
-  cancelled: 'Cancelled',
-  queued: 'Queued',
-  resolving: 'Checking',
-  saving: 'Writing',
-}
-
 function TrendingFirst({ track }) {
+  const { t } = useTranslation()
   const a = useTrackActions(track)
   if (!track) return null
   return (
-    <button type="button" className="trending-first" onClick={a.play} aria-label={`Play ${track.title}`}>
+    <button type="button" className="trending-first" onClick={a.play} aria-label={`${t('common.play')} ${track.title}`}>
       <Artwork src={track.artworkSmall || track.artwork} alt="" style={{ width: 74, height: 74, borderRadius: 16 }} />
-      <div className="grow" style={{ textAlign: 'left', minWidth: 0 }}>
-        <span className="trending-label">Trending now · #1</span>
+      <div className="grow" style={{ textAlign: 'start', minWidth: 0 }}>
+        <span className="trending-label">{t('home.trendingFirst')}</span>
         <strong className="truncate" style={{ display: 'block', fontSize: 15, marginTop: 2 }}>
           {track.title}
         </strong>
@@ -47,6 +40,7 @@ function TrendingFirst({ track }) {
 }
 
 export default function Home() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { identifications, watched, downloads, counts } = useLibrary()
   const [term, setTerm] = useState('')
@@ -76,9 +70,9 @@ export default function Home() {
   return (
     <>
       <div className="home-hero">
-        <span className="eyebrow">Identify · Stream · Collect</span>
+        <span className="eyebrow">{t('home.eyebrow')}</span>
         <h1 style={{ marginTop: 4, marginBottom: 10 }}>
-          Your sound, <span className="grad-text">on record.</span>
+          {t('home.titleLead')} <span className="grad-text">{t('home.titleAccent')}</span>
         </h1>
 
         <form onSubmit={submit} role="search">
@@ -87,8 +81,8 @@ export default function Home() {
             <input
               value={term}
               onChange={(e) => setTerm(e.target.value)}
-              placeholder="Songs, artists, videos, keywords"
-              aria-label="Search music, artists, videos and keywords"
+              placeholder={t('home.quickSearch')}
+              aria-label={t('home.searchLabel')}
               enterKeyHint="search"
             />
             {term && (
@@ -96,7 +90,7 @@ export default function Home() {
                 type="button"
                 className="icon-btn"
                 style={{ width: 28, height: 28 }}
-                aria-label="Clear search"
+                aria-label={t('common.clear')}
                 onClick={() => setTerm('')}
               >
                 ×
@@ -107,10 +101,10 @@ export default function Home() {
 
         <div className="row gap-8" style={{ marginTop: 12 }}>
           <Link to="/identify" className="btn btn-primary btn-sm">
-            <IconMic size={15} /> Identify a song
+            <IconMic size={15} /> {t('home.identify')}
           </Link>
           <Link to="/discover" className="btn btn-sm btn-ghost">
-            Discover <IconChevron size={13} />
+            {t('home.discover')} <IconChevron size={13} />
           </Link>
         </div>
       </div>
@@ -118,19 +112,19 @@ export default function Home() {
       <div className="quick-grid" style={{ marginTop: 18 }}>
         <Link to="/downloads" className="quick-card">
           <IconDownload size={19} />
-          Downloads
+          {t('home.downloads')}
         </Link>
         <Link to="/library" className="quick-card">
           <IconLibrary size={19} />
-          My Library
+          {t('home.myLibrary')}
         </Link>
         <Link to="/watch-later" className="quick-card">
           <IconHeart size={19} />
-          Watch Later
+          {t('home.watchLater')}
         </Link>
         <Link to="/playlists" className="quick-card">
           <IconPlay size={19} />
-          Playlists
+          {t('home.playlists')}
         </Link>
       </div>
 
@@ -138,7 +132,7 @@ export default function Home() {
         <Link to="/library?tab=identified" className="card card-pad" style={{ padding: '12px 14px' }}>
           <div className="between">
             <div>
-              <span className="eyebrow">Identified</span>
+              <span className="eyebrow">{t('home.identified')}</span>
               <h3 style={{ fontSize: 22, marginTop: 2 }}>{counts.identifications}</h3>
             </div>
             <IconMic size={18} style={{ color: 'var(--blue-soft)' }} />
@@ -147,7 +141,7 @@ export default function Home() {
         <Link to="/library?tab=favourites" className="card card-pad" style={{ padding: '12px 14px' }}>
           <div className="between">
             <div>
-              <span className="eyebrow">Favourites</span>
+              <span className="eyebrow">{t('home.favourites')}</span>
               <h3 style={{ fontSize: 22, marginTop: 2 }}>{counts.favourites}</h3>
             </div>
             <IconHeart size={18} style={{ color: '#ff5d8f' }} />
@@ -155,22 +149,18 @@ export default function Home() {
         </Link>
       </div>
 
-      <Section
-        title="Recently identified"
-        to={recentIds.length ? '/library?tab=identified' : undefined}
-        actionLabel="All Shazams"
-      >
+      <Section title={t('home.recentlyIdentified')} to={recentIds.length ? '/library?tab=identified' : undefined}>
         {recentIds.length === 0 ? (
           <EmptyState
             icon={<span style={{ fontSize: 22 }}>🎧</span>}
-            title="Nothing identified yet"
+            title={t('home.emptyRecent')}
             action={
               <Link to="/identify" className="btn btn-sm btn-ghost" style={{ marginTop: 4 }}>
-                Open Identify
+                {t('home.openIdentify')}
               </Link>
             }
           >
-            Matches land here with artwork, a verified badge and up to 30 related results.
+            {t('home.emptyRecentBody')}
           </EmptyState>
         ) : (
           <div className="hscroll">
@@ -184,7 +174,7 @@ export default function Home() {
         )}
       </Section>
 
-      <Section title="Trending now" to="/discover">
+      <Section title={t('home.trending')} to="/discover">
         {charts.loading ? (
           <div className="hscroll">
             {[0, 1, 2, 3].map((i) => (
@@ -199,32 +189,32 @@ export default function Home() {
           <div className="notice notice-info">
             <span aria-hidden="true">ⓘ</span>
             <div>
-              Trending needs a connection to the Apple Music chart feed. {charts.error}
+              {t('home.chartOffline')} {charts.error}
               <br />
               <Link to="/discover" className="section-link" style={{ marginTop: 6 }}>
-                Retry in Discover <IconChevron size={13} />
+                {t('home.retryDiscover')} <IconChevron size={13} />
               </Link>
             </div>
           </div>
         ) : charts.items.length === 0 ? (
-          <EmptyState title="No chart data available" />
+          <EmptyState title={t('home.noChart')} />
         ) : (
           <>
             {/* The chart's number one, given the space it deserves. */}
             <TrendingFirst track={charts.items[0]} />
             <div className="hscroll">
-              {charts.items.slice(1).map((t) => (
-                <TrackTile key={t.id} track={t} showRank />
+              {charts.items.slice(1).map((t2) => (
+                <TrackTile key={t2.id} track={t2} showRank />
               ))}
             </div>
           </>
         )}
       </Section>
 
-      <Section title="Recently played videos" to="/videos" actionLabel="Open Videos">
+      <Section title={t('home.recentVideos')} to="/videos" actionLabel={t('home.openVideos')}>
         {watched.length === 0 ? (
-          <EmptyState icon={<IconVideo size={22} />} title="No videos watched yet">
-            Playback happens inside the app — nothing is downloaded when you watch.
+          <EmptyState icon={<IconVideo size={22} />} title={t('home.noVideos')}>
+            {t('home.noVideosBody')}
           </EmptyState>
         ) : (
           <div className="hscroll">
@@ -245,18 +235,18 @@ export default function Home() {
         )}
       </Section>
 
-      <Section title="Recent downloads" to="/downloads" actionLabel="Download manager">
+      <Section title={t('home.recentDownloads')} to="/downloads" actionLabel={t('home.downloadManager')}>
         {recentDownloads.length === 0 ? (
           <div className="card card-pad">
             <div className="between">
               <div>
-                <span className="eyebrow">Downloads</span>
+                <span className="eyebrow">{t('home.downloads')}</span>
                 <p className="small muted" style={{ marginTop: 4, maxWidth: '42ch' }}>
-                  Save provider-published preview clips to your device. YouTube playback never downloads a file.
+                  {t('home.downloadsEmptyBody')}
                 </p>
               </div>
               <Link to="/downloads" className="btn btn-sm">
-                Open <IconChevron size={14} />
+                {t('common.open')} <IconChevron size={14} />
               </Link>
             </div>
           </div>
@@ -272,7 +262,7 @@ export default function Home() {
                     {d.fileName || d.title}
                   </span>
                   <span className="track-row-sub">
-                    {STATUS_LABEL[d.status] || d.status}
+                    {t(`downloads.status.${d.status}`, { defaultValue: d.status })}
                     {d.size ? ` · ${formatBytes(d.size)}` : ''} · {timeAgo(d.at)}
                   </span>
                 </span>

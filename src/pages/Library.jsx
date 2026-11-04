@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Artwork, EmptyState, Segmented } from '../components/ui.jsx'
 import { TrackRow } from '../components/TrackBits.jsx'
@@ -29,6 +30,7 @@ const TABS = [
 ]
 
 export default function Library() {
+  const { t } = useTranslation()
   const [params, setParams] = useSearchParams()
   const tab = TABS.some((t) => t.value === params.get('tab')) ? params.get('tab') : 'identified'
   const [filter, setFilter] = useState('')
@@ -74,10 +76,10 @@ export default function Library() {
     <>
       <div className="between" style={{ alignItems: 'flex-end' }}>
         <div>
-          <span className="eyebrow">On this device</span>
-          <h1 style={{ marginTop: 4 }}>My Library</h1>
+          <span className="eyebrow">{t('library.onThisDevice')}</span>
+          <h1 style={{ marginTop: 4 }}>{t('library.title')}</h1>
         </div>
-        <span className="tiny mute">{plural(total, 'item')}</span>
+        <span className="tiny mute">{t('common.itemCount', { count: total })}</span>
       </div>
 
       <div className="row gap-8" style={{ marginTop: 14 }}>
@@ -102,7 +104,7 @@ export default function Library() {
           onChange={(e) => setSort(e.target.value)}
           aria-label="Sort library"
         >
-          <option value="recent">Recent</option>
+          <option value="recent">{t('library.recent')}</option>
           <option value="az">A–Z</option>
         </select>
       </div>
@@ -139,7 +141,7 @@ export default function Library() {
                       {item.exact.artist} · {timeAgo(item.at)}
                     </div>
                   </Link>
-                  <span className="badge badge-exact hide-mobile">Matched</span>
+                  <span className="badge badge-exact hide-mobile">{t('library.matched')}</span>
                   <span className="tiny mute" style={{ flex: 'none' }}>
                     {1 + item.similar.length + item.possible.length}
                   </span>
@@ -166,7 +168,7 @@ export default function Library() {
 
         {tab === 'videos' &&
           (videos.length === 0 ? (
-            <EmptyState icon={<IconVideo size={22} />} title="No saved videos">
+            <EmptyState icon={<IconVideo size={22} />} title={t('library.noVideos')}>
               Save a video from the Videos section or from the player page.
             </EmptyState>
           ) : (
@@ -181,7 +183,7 @@ export default function Library() {
 
         {tab === 'later' &&
           (watchLater.length === 0 ? (
-            <EmptyState icon={<IconVideo size={22} />} title="Watch Later is empty">
+            <EmptyState icon={<IconVideo size={22} />} title={t('library.watchLaterEmpty')}>
               Add videos with the clock icon.
             </EmptyState>
           ) : (
@@ -197,7 +199,7 @@ export default function Library() {
         {tab === 'downloads' && (
           <>
             {downloads.length === 0 ? (
-              <EmptyState icon={<IconDownload size={22} />} title="No downloads yet">
+              <EmptyState icon={<IconDownload size={22} />} title={t('library.noDownloads')}>
                 Authorized preview clips you save appear here with their status.
                 <div style={{ marginTop: 10 }}>
                   <Link to="/downloads" className="btn btn-sm btn-ghost">
@@ -238,7 +240,7 @@ export default function Library() {
         {tab === 'playlists' && (
           <>
             {playlists.length === 0 ? (
-              <EmptyState icon={<IconList size={22} />} title="No playlists yet">
+              <EmptyState icon={<IconList size={22} />} title={t('library.noPlaylists')}>
                 <Link to="/playlists" className="btn btn-sm btn-primary" style={{ marginTop: 8 }}>
                   <IconPlus size={14} /> Create a playlist
                 </Link>
@@ -254,7 +256,7 @@ export default function Library() {
                       <span className="track-row-title truncate" style={{ display: 'block' }}>
                         {p.name}
                       </span>
-                      <span className="track-row-sub">{plural(p.items.length, 'track')}</span>
+                      <span className="track-row-sub">{t('common.trackCount', { count: p.items.length })}</span>
                     </span>
                     <IconChevron size={16} />
                   </Link>
@@ -267,7 +269,7 @@ export default function Library() {
         {tab === 'searches' && (
           <>
             {searches.length === 0 ? (
-              <EmptyState icon={<IconSearch size={22} />} title="No search history">
+              <EmptyState icon={<IconSearch size={22} />} title={t('library.noHistory')}>
                 Searches you run are stored locally so you can jump back in.
               </EmptyState>
             ) : (

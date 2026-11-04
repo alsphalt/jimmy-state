@@ -114,11 +114,19 @@ app.use((req, res, next) => {
  *
  * Needed only when the frontend is deployed apart from the API (VITE_API_BASE).
  * No wildcard: an origin must be named in CORS_ORIGINS.
+ *
+ * The Android app is always cross-origin relative to this server: Capacitor serves
+ * the same bundle from https://localhost inside the WebView. Those origins are
+ * allowed unconditionally so a fresh APK talks to the existing deployment without
+ * operator setup — otherwise the app would need a CORS_ORIGINS change before its
+ * recognition and search worked at all.
  */
-const corsOrigins = String(process.env.CORS_ORIGINS || '')
+const APP_ORIGINS = ['https://localhost', 'http://localhost', 'capacitor://localhost', 'ionic://localhost']
+
+const corsOrigins = [...APP_ORIGINS, ...String(process.env.CORS_ORIGINS || '')
   .split(',')
   .map((o) => o.trim().replace(/\/+$/, ''))
-  .filter(Boolean)
+  .filter(Boolean)]
 
 app.use('/api', (req, res, next) => {
   const origin = req.headers.origin

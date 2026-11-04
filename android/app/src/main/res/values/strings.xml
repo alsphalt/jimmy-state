@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">JIMMY STATE</string>
+    <string name="title_activity_main">JIMMY STATE</string>
+    <string name="package_name">com.jimmystate.app</string>
+    <string name="custom_url_scheme">com.jimmystate.app</string>
+</resources>

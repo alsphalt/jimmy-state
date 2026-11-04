@@ -10,7 +10,7 @@
   },
   "rewrites": [
     {
-      "source": "/((?!api/).*)",
+      "source": "/((?!api/|assets/|icons/|fonts/|app/).*)",
       "destination": "/index.html"
     }
   ],

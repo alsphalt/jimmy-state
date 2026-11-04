@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import VideoCard from '../components/VideoCard.jsx'
 import { EmptyState, ErrorBlock, Loading, Section, Segmented } from '../components/ui.jsx'
@@ -7,6 +8,7 @@ import { api } from '../lib/api.js'
 import { useLibrary } from '../context/LibraryContext.jsx'
 
 export default function Videos() {
+  const { t } = useTranslation()
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const { watched, watchLater, savedVideoIds } = useLibrary()
@@ -68,7 +70,7 @@ export default function Videos() {
 
   return (
     <>
-      <h1>Videos</h1>
+      <h1>{t('videos.title')}</h1>
       <p className="small muted" style={{ marginTop: 4, marginBottom: 14 }}>
         Stream inside the app. Watching never downloads a file.
       </p>
@@ -89,12 +91,12 @@ export default function Videos() {
           <input
             value={term}
             onChange={(e) => setTerm(e.target.value)}
-            placeholder={source === 'catalog' ? 'Search music videos by title or artist' : 'Search YouTube by title or keyword'}
-            aria-label="Search videos"
+            placeholder={t(source === 'catalog' ? 'videos.searchCatalogPlaceholder' : 'videos.searchYoutubePlaceholder')}
+            aria-label={t('videos.searchLabel')}
             enterKeyHint="search"
           />
           <button type="submit" className="btn btn-sm" disabled={!term.trim()}>
-            Search
+            {t('common.search')}
           </button>
         </label>
       </form>
@@ -103,16 +105,14 @@ export default function Videos() {
         <div className="notice notice-info" style={{ marginTop: 14 }}>
           <IconPlay size={16} style={{ flex: 'none', marginTop: 1 }} />
           <div>
-            <strong>Catalogue music videos play without any API key.</strong> Apple publishes a preview clip and cover
-            for each video, so this tab works with no YouTube credentials. Keyword search on YouTube itself still needs
-            a key.
+            <strong>{t('videos.catalogNoticeTitle')}</strong> {t('videos.catalogNoticeBody')}
           </div>
         </div>
       )}
 
       {results.loading && (
         <div style={{ marginTop: 16 }}>
-          <Loading label={source === 'catalog' ? 'Searching the video catalogue…' : 'Searching YouTube…'} rows={4} />
+          <Loading label={t(source === 'catalog' ? 'videos.searchingCatalog' : 'videos.searchingYoutube')} rows={4} />
         </div>
       )}
 
@@ -121,24 +121,24 @@ export default function Videos() {
           {source === 'youtube' && !results.configured ? (
             <>
               <div className="card card-pad">
-                <span className="eyebrow">Setup</span>
-                <h3 style={{ margin: '6px 0 8px' }}>YouTube search needs an API key</h3>
+                <span className="eyebrow">{t('common.setup')}</span>
+                <h3 style={{ margin: '6px 0 8px' }}>{t('videos.youtubeKeyTitle')}</h3>
                 <p className="small muted" style={{ marginBottom: 10 }}>
                   {results.error}
                 </p>
                 <ol className="small muted" style={{ paddingLeft: 18, margin: '0 0 12px', lineHeight: 1.7 }}>
-                  <li>Create a project in Google Cloud and enable <b>YouTube Data API v3</b>.</li>
-                  <li>Create an API key (restrict it to this server’s IP or the YouTube Data API).</li>
-                  <li>Add <code>YOUTUBE_API_KEY=…</code> to <code>.env</code> and restart the server.</li>
+                  <li>{t('videos.youtubeKeyStep1')}</li>
+                  <li>{t('videos.youtubeKeyStep2')}</li>
+                  <li>{t('videos.youtubeKeyStep3')}</li>
                 </ol>
                 <p className="tiny mute">
-                  Meanwhile, paste a link below — playback and title resolution work without a key.
+                  {t('videos.youtubeKeyMeanwhile')}
                 </p>
               </div>
               <div className="card card-pad" style={{ marginTop: 12 }}>
-                <span className="eyebrow">Play a known video</span>
+                <span className="eyebrow">{t('videos.knownVideo')}</span>
                 <p className="tiny muted" style={{ margin: '6px 0 10px' }}>
-                  Paste a YouTube link or 11-character id.
+                  {t('videos.pasteHint')}
                 </p>
                 <form onSubmit={playManual} className="row gap-8">
                   <input
@@ -162,7 +162,7 @@ export default function Videos() {
 
       {!results.loading && !results.error && results.ran && results.items.length === 0 && (
         <div style={{ marginTop: 16 }}>
-          <EmptyState icon={<IconVideo size={22} />} title="No videos matched">
+          <EmptyState icon={<IconVideo size={22} />} title={t('videos.noMatch')}>
             Try a different title, artist or keyword{source === 'catalog' ? ', or switch to YouTube' : ''}.
           </EmptyState>
         </div>
@@ -171,7 +171,7 @@ export default function Videos() {
       {results.items.length > 0 && (
         <div style={{ marginTop: 16 }}>
           <div className="section-head">
-            <h2 style={{ fontSize: 16 }}>Results</h2>
+            <h2 style={{ fontSize: 16 }}>{t('common.results')}</h2>
             <span className="tiny mute">
               {results.items.length} {source === 'catalog' ? 'music videos' : 'videos'}
             </span>
@@ -185,7 +185,7 @@ export default function Videos() {
       )}
 
       {watched.length > 0 && (
-        <Section title="Recently watched" to="/watch-later" actionLabel="Watch Later">
+        <Section title={t('videos.recentlyWatched')} to="/watch-later" actionLabel={t('nav.watchLater')}>
           <div className="hscroll">
             {watched.slice(0, 8).map((w) => (
               <div key={w.videoId} style={{ width: 210 }}>
@@ -197,7 +197,7 @@ export default function Videos() {
       )}
 
       {watchLater.length > 0 && (
-        <Section title="Watch Later" to="/watch-later">
+        <Section title={t('nav.watchLater')} to="/watch-later">
           <div className="hscroll">
             {watchLater.slice(0, 8).map((w) => (
               <div key={w.videoId} style={{ width: 210 }}>
@@ -221,11 +221,10 @@ export default function Videos() {
       <div className="card card-pad" style={{ marginTop: 22 }}>
         <div className="row gap-8" style={{ marginBottom: 6 }}>
           <IconClock size={16} />
-          <strong style={{ fontSize: 13 }}>Streaming ≠ downloading</strong>
+          <strong style={{ fontSize: 13 }}>{t('videos.streamTitle')}</strong>
         </div>
         <p className="tiny muted">
-          Watching streams the clip from the platform that hosts it. YouTube videos are never saved by this app. Catalogue
-          previews are the only video files that can be downloaded, because the provider publishes them for that use.
+          {t('videos.streamBody')}
         </p>
         <a
           className="section-link"

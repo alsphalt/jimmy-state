@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { BottomNav, InstallBanner, PlayerBar, TopBar } from './components/Chrome.jsx'
+import { BottomNav, InstallBanner, PlayerBar, TopBar, UpdateBar } from './components/Chrome.jsx'
 import { OfflineNote, Toasts } from './components/ui.jsx'
 import { usePlayer } from './context/PlayerContext.jsx'
 
@@ -14,6 +14,7 @@ import Downloads from './pages/Downloads.jsx'
 import Search from './pages/Search.jsx'
 import SongDetails from './pages/SongDetails.jsx'
 import Settings from './pages/Settings.jsx'
+import Language from './pages/Language.jsx'
 import Services from './pages/Services.jsx'
 import Privacy from './pages/Privacy.jsx'
 import TikTokLink from './pages/TikTokLink.jsx'
@@ -38,6 +39,7 @@ export default function App() {
     <div className="app">
       <TopBar />
       <InstallBanner />
+      <UpdateBar />
       <main className="shell grow" style={{ width: '100%' }}>
         <Routes>
           <Route path="/" element={<Page><Home /></Page>} />
@@ -55,6 +57,7 @@ export default function App() {
           <Route path="/search" element={<Page><Search /></Page>} />
           <Route path="/song/:key" element={<Page><SongDetails /></Page>} />
           <Route path="/settings" element={<Page><Settings /></Page>} />
+          <Route path="/settings/language" element={<Page><Language /></Page>} />
           <Route path="/services" element={<Page><Services /></Page>} />
           <Route path="/privacy" element={<Page><Privacy /></Page>} />
           <Route path="/tools/tiktok" element={<Page><TikTokLink /></Page>} />

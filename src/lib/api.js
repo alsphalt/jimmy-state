@@ -9,9 +9,29 @@
  *
  * 2. The API does not have to live on the same origin. Set VITE_API_BASE at build
  *    time (e.g. https://api.example.com) when the frontend is hosted separately.
+ *
+ * 3. Inside the APK the page is served by Capacitor from https://localhost, so a
+ *    relative /api path points at the WebView itself and every call 404s. Native
+ *    builds therefore fall back to the deployed server unless the build sets
+ *    VITE_API_BASE. One project, one backend: only the origin string differs.
  */
 
-const RAW_BASE = import.meta.env?.VITE_API_BASE || ''
+const NATIVE_ORIGIN = 'https://jimmy-state.vercel.app'
+
+const IS_NATIVE =
+  typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.() === true
+
+/** Escape hatch for device testing without a rebuild. */
+function runtimeBase() {
+  try {
+    return window.localStorage.getItem('jimmy-state:api-base') || ''
+  } catch {
+    return ''
+  }
+}
+
+const RAW_BASE =
+  import.meta.env?.VITE_API_BASE || runtimeBase() || (IS_NATIVE ? NATIVE_ORIGIN : '')
 export const API_BASE = String(RAW_BASE).replace(/\/+$/, '')
 
 const withBase = (path) => (path.startsWith('/api') ? `${API_BASE}${path}` : path)

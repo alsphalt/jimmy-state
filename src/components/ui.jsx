@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { initials } from '../lib/format.js'
 import { IconAlert, IconCheck, IconChevron, IconExternal, IconX } from './Icons.jsx'
 import { useToast } from '../context/LibraryContext.jsx'
@@ -21,14 +22,15 @@ export function Artwork({ src, alt = '', className = 'art', style, size }) {
   )
 }
 
-export function Section({ title, action, children, to, actionLabel = 'See all', className = 'section' }) {
+export function Section({ title, action, children, to, actionLabel, className = 'section' }) {
+  const { t } = useTranslation()
   return (
     <section className={className}>
       <div className="section-head">
         <h2>{title}</h2>
         {action || (to && (
           <Link to={to} className="section-link">
-            {actionLabel} <IconChevron size={14} />
+            {actionLabel || t('common.seeAll')} <IconChevron size={14} />
           </Link>
         ))}
       </div>
@@ -48,11 +50,13 @@ export function EmptyState({ icon, title, children, action }) {
   )
 }
 
-export function Loading({ label = 'Loading…', rows = 3 }) {
+export function Loading({ label, rows = 3 }) {
+  const { t } = useTranslation()
+  const text = label || t('common.loading')
   return (
     <div aria-busy="true" aria-live="polite">
       <div className="row gap-8 muted tiny" style={{ marginBottom: 10 }}>
-        <span className="spinner" /> {label}
+        <span className="spinner" /> {text}
       </div>
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="row gap-12" style={{ marginBottom: 10 }}>
@@ -63,12 +67,13 @@ export function Loading({ label = 'Loading…', rows = 3 }) {
           </div>
         </div>
       ))}
-      <span className="sr-only">{label}</span>
+      <span className="sr-only">{text}</span>
     </div>
   )
 }
 
 export function ErrorBlock({ error, onRetry, children }) {
+  const { t } = useTranslation()
   if (!error) return null
   return (
     <div className="notice notice-error" role="alert" style={{ alignItems: 'flex-start' }}>
@@ -78,7 +83,7 @@ export function ErrorBlock({ error, onRetry, children }) {
         {children}
         {onRetry && (
           <button type="button" className="btn btn-sm btn-ghost" style={{ marginTop: 8 }} onClick={onRetry}>
-            Try again
+            {t('common.retry')}
           </button>
         )}
       </div>
@@ -106,6 +111,7 @@ export function Toasts() {
 }
 
 export function OfflineNote() {
+  const { t } = useTranslation()
   const [offline, setOffline] = useState(typeof navigator !== 'undefined' && !navigator.onLine)
   useEffect(() => {
     const on = () => setOffline(false)
@@ -122,8 +128,7 @@ export function OfflineNote() {
     <div className="notice" style={{ marginBottom: 14 }}>
       <IconAlert size={17} style={{ flex: 'none', marginTop: 1 }} />
       <div>
-        <strong>You are offline.</strong> Your saved library, playlists and download history still work. Recognition,
-        search and streaming need a connection.
+        <strong>{t('state.offlineTitle')}</strong> {t('state.offlineBody')}
       </div>
     </div>
   )
@@ -133,11 +138,12 @@ export function OfflineNote() {
  * "Listen on …" links. These are opens, not downloads: playback stays with the
  * platform that owns the stream.
  */
-export function PlatformLinks({ links = [], title = 'Listen on' }) {
+export function PlatformLinks({ links = [], title }) {
+  const { t } = useTranslation()
   if (!links?.length) return null
   return (
     <div className="stack gap-6" style={{ alignItems: 'center' }}>
-      <span className="eyebrow">{title}</span>
+      <span className="eyebrow">{title || t('song.listenOn')}</span>
       <div className="row wrap gap-8" style={{ justifyContent: 'center' }}>
         {links.map((link) => (
           <a

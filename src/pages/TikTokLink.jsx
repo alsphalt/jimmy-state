@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { Artwork, Loading } from '../components/ui.jsx'
 import { IconAlert, IconChevron, IconExternal, IconLink, IconPlay } from '../components/Icons.jsx'
@@ -13,6 +14,7 @@ import { useLibrary, useToast } from '../context/LibraryContext.jsx'
  * real endpoint. Playback goes through TikTok's own embed.
  */
 export default function TikTokLink() {
+  const { t } = useTranslation()
   const [url, setUrl] = useState('')
   const [state, setState] = useState({ loading: false, error: null, data: null })
   const { toast } = useToast()
@@ -57,9 +59,9 @@ export default function TikTokLink() {
     <>
       <div className="row gap-8" style={{ marginBottom: 8 }}>
         <IconLink size={18} />
-        <span className="eyebrow">Tool</span>
+        <span className="eyebrow">{t('tiktok.eyebrow')}</span>
       </div>
-      <h1>TikTok link to video</h1>
+      <h1>{t('tiktok.title')}</h1>
       <p className="small muted" style={{ marginTop: 6, marginBottom: 18 }}>
         Paste a public TikTok link — including <code>vm.</code> and <code>vt.</code> short links — and it plays here in
         TikTok&rsquo;s own player.
@@ -184,7 +186,7 @@ export default function TikTokLink() {
           </div>
 
           <Link to="/videos" className="row gap-6 small mute" style={{ marginTop: 16 }}>
-            <IconPlay size={14} /> Browse videos <IconChevron size={14} />
+            <IconPlay size={14} /> {t('watchLater.browse')} <IconChevron size={14} />
           </Link>
         </section>
       )}

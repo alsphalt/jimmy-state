@@ -5,7 +5,17 @@
  * streams are also left to the network so nothing large is preloaded.
  */
 
-const VERSION = 'js-v1.1.0'
+/* Stamped at build time by stampServiceWorker() in vite.config.js with the package
+ * version plus a per-build id, e.g. js-1.1.1-m8f2k1. The cache names are derived
+ * from it, so every deploy gets fresh caches and activate() deletes the previous
+ * ones. A hand-pinned version is what let an old index.html survive a deploy that
+ * had already deleted the stylesheet it pointed at: the browser requested a
+ * missing CSS file, the static host answered with the SPA shell, nosniff refused
+ * it, and the app rendered completely unstyled. Keep this derived, never fixed.
+ *
+ * The literal placeholder is only ever seen by a dev server, which does not
+ * register the worker (registration is PROD-only). */
+const VERSION = 'js-__BUILD_ID__'
 const SHELL_CACHE = `${VERSION}-shell`
 const ASSET_CACHE = `${VERSION}-assets`
 
@@ -16,6 +26,9 @@ const SHELL = [
   '/icons/icon-512.png',
   '/icons/icon-maskable-512.png',
   '/icons/favicon.svg',
+  // The design face, so an offline launch still renders in Inter rather than the
+  // device's default sans.
+  '/fonts/inter-latin-var.woff2',
 ]
 
 self.addEventListener('install', (event) => {
@@ -91,6 +104,7 @@ self.addEventListener('fetch', (event) => {
   if (
     url.pathname.startsWith('/assets/') ||
     url.pathname.startsWith('/icons/') ||
+    url.pathname.startsWith('/fonts/') ||
     url.pathname === '/manifest.webmanifest' ||
     url.pathname.endsWith('.css') ||
     url.pathname.endsWith('.js')

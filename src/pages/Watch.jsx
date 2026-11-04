@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import YouTubePlayer from '../components/YouTubePlayer.jsx'
 import VideoCard from '../components/VideoCard.jsx'
@@ -21,6 +22,7 @@ import { normalizeVideo } from '../lib/track.js'
 const isCatalogId = (id) => /^mv-\d+$/.test(id)
 
 export default function Watch() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { id } = useParams()
   const catalog = isCatalogId(id)
@@ -112,7 +114,7 @@ export default function Watch() {
             referrerPolicy="strict-origin-when-cross-origin"
           />
         </div>
-        <h1 style={{ marginTop: 14, fontSize: 20 }}>{saved?.title || 'TikTok post'}</h1>
+        <h1 style={{ marginTop: 14, fontSize: 20 }}>{saved?.title || t('watch.tiktokPost')}</h1>
         <p className="small muted">{saved?.channel || 'TikTok'}</p>
         <div className="row gap-8 wrap" style={{ marginTop: 12 }}>
           <a className="chip" href={shareUrl} target="_blank" rel="noreferrer noopener">
@@ -182,14 +184,14 @@ export default function Watch() {
           </div>
         ) : (
           <div className="player-frame center">
-            {state.loading ? <span className="spinner spinner-lg" /> : <span className="tiny mute">No preview published</span>}
+            {state.loading ? <span className="spinner spinner-lg" /> : <span className="tiny mute">{t('song.noPreview')}</span>}
           </div>
         )
       ) : (
         <>
           <YouTubePlayer videoId={id} onPlaying={onPlaying} onDuration={setPlayerDuration} />
           <div className="row gap-6 wrap" style={{ marginTop: 8 }}>
-            <span className="badge badge-live">Full video</span>
+            <span className="badge badge-live">{t('watch.fullVideo')}</span>
             <span className="tiny mute">
               {playerDuration ? `${formatDuration(playerDuration)} · ` : ''}streams from YouTube · resumes where you
               stopped
@@ -227,7 +229,7 @@ export default function Watch() {
           !state.loading &&
           state.error && (
             <div className="card card-pad">
-              <span className="eyebrow">Metadata</span>
+              <span className="eyebrow">{t('common.metadata')}</span>
               <p className="small muted" style={{ marginTop: 6 }}>
                 {state.error === 'unconfigured'
                   ? 'Video details need YOUTUBE_API_KEY. Playback still works for a valid video id.'
@@ -242,7 +244,7 @@ export default function Watch() {
         <div className="card card-pad" style={{ marginTop: 16 }}>
           <div className="row gap-8" style={{ marginBottom: 8 }}>
             <IconDownload size={16} style={{ color: 'var(--cyan)' }} />
-            <strong style={{ fontSize: 13 }}>Download this preview</strong>
+            <strong style={{ fontSize: 13 }}>{t('song.download')}</strong>
           </div>
           <p className="tiny muted">
             The provider publishes this clip for preview use, so it can be saved — a short M4V, not the full video.
@@ -261,7 +263,7 @@ export default function Watch() {
         <div className="card card-pad" style={{ marginTop: 16 }}>
           <div className="row gap-8" style={{ marginBottom: 8 }}>
             <IconAlert size={16} style={{ color: 'var(--amber)' }} />
-            <strong style={{ fontSize: 13 }}>Download not available for YouTube videos</strong>
+            <strong style={{ fontSize: 13 }}>{t('watch.downloadUnavailable')}</strong>
           </div>
           <p className="tiny muted">
             A YouTube API key authorizes search and embedded playback — not downloading or audio extraction. JIMMY STATE
@@ -288,7 +290,7 @@ export default function Watch() {
       {related.items.length > 0 && (
         <section className="section">
           <div className="section-head">
-            <h2 style={{ fontSize: 16 }}>Related videos</h2>
+            <h2 style={{ fontSize: 16 }}>{t('watch.related')}</h2>
           </div>
           <div className="video-grid">
             {related.items.map((v) => (
@@ -306,7 +308,7 @@ export default function Watch() {
 
       {!catalog && !related.loading && related.items.length === 0 && (
         <div style={{ marginTop: 20 }}>
-          <EmptyState icon={<IconShield size={20} />} title="No related videos">
+          <EmptyState icon={<IconShield size={20} />} title={t('watch.noRelated')}>
             Related results need the YouTube Data API. Nothing is shown when reliable data is unavailable.
           </EmptyState>
         </div>

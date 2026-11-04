@@ -2,6 +2,20 @@
    JIMMY STATE — design tokens + primitives
    ========================================================================== */
 
+/* Inter is the design face, not a hope. It used to be named first in the stack
+   without ever being served, so every device without Inter installed silently
+   fell back to whatever its OS chose. The file is self-hosted from /fonts, which
+   the CSP already allows (font-src 'self'), and the variable 400–800 axis covers
+   every weight the tokens below actually use. */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url('/fonts/inter-latin-var.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 :root {
   --bg: #04050a;
   --bg-2: #070910;
@@ -116,7 +130,7 @@ body {
     radial-gradient(80% 50% at 50% 110%, rgba(34, 211, 238, 0.07), transparent 60%),
     var(--bg);
   background-attachment: fixed;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-size: 15px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;

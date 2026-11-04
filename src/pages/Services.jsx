@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { IconCheck, IconChevron, IconDownload, IconShield, IconTrash, IconX } from '../components/Icons.jsx'
 import { useLibrary, useToast } from '../context/LibraryContext.jsx'
@@ -22,6 +23,7 @@ function StatusRow({ ok, label, detail }) {
 }
 
 export default function Services() {
+  const { t } = useTranslation()
   const { counts, eraseAll, db } = useLibrary()
   const { toast } = useToast()
   const install = useInstallPrompt()
@@ -55,14 +57,14 @@ export default function Services() {
 
   return (
     <>
-      <h1>Settings</h1>
+      <h1>{t('services.title')}</h1>
       <p className="tiny mute" style={{ marginTop: -6 }}>
-        Services, storage and device. Appearance lives in Settings from the menu.
+        {t('services.subtitle')}
       </p>
 
       <div className="card card-pad" style={{ marginTop: 14 }}>
-        <span className="eyebrow">Services</span>
-        {!health && <p className="tiny muted" style={{ marginTop: 8 }}>Checking the server…</p>}
+        <span className="eyebrow">{t('services.eyebrow')}</span>
+        {!health && <p className="tiny muted" style={{ marginTop: 8 }}>{t('services.checking')}</p>}
         {health && (
           <>
             <StatusRow
@@ -77,7 +79,7 @@ export default function Services() {
             />
             <StatusRow ok label="Music catalogue" detail="iTunes Search API + Apple charts" />
             <div className="kv">
-              <span>Download hosts</span>
+              <span>{t('services.downloadHosts')}</span>
               <b className="truncate" style={{ maxWidth: '60%' }}>
                 {health.downloadHosts?.join(', ')}
               </b>
@@ -87,7 +89,7 @@ export default function Services() {
       </div>
 
       <div className="card card-pad" style={{ marginTop: 12 }}>
-        <span className="eyebrow">App installation</span>
+        <span className="eyebrow">{t('services.install')}</span>
         <p className="small muted" style={{ marginTop: 6 }}>
           {install.installed
             ? 'JIMMY STATE is installed on this device.'
@@ -114,26 +116,26 @@ export default function Services() {
       </div>
 
       <div className="card card-pad" style={{ marginTop: 12 }}>
-        <span className="eyebrow">Storage</span>
+        <span className="eyebrow">{t('services.storage')}</span>
         <div className="kv">
-          <span>Database</span>
+          <span>{t('services.database')}</span>
           <b>{storageBackend()}</b>
         </div>
         <div className="kv">
-          <span>Saved items</span>
+          <span>{t('services.savedItems')}</span>
           <b>
             {counts.identifications} ids · {counts.favourites} favourites · {counts.videos} videos
           </b>
         </div>
         <div className="kv">
-          <span>Playlists / downloads</span>
+          <span>{t('services.playlistsDownloads')}</span>
           <b>
             {counts.playlists} / {counts.downloads}
           </b>
         </div>
         {usage && (
           <div className="kv">
-            <span>Browser storage used</span>
+            <span>{t('services.browserStorage')}</span>
             <b>
               {formatBytes(usage.usage)} of {formatBytes(usage.quota)}
             </b>
@@ -166,7 +168,7 @@ export default function Services() {
       </div>
 
       <div className="card card-pad" style={{ marginTop: 12 }}>
-        <span className="eyebrow">Microphone</span>
+        <span className="eyebrow">{t('services.microphone')}</span>
         <p className="tiny muted" style={{ marginTop: 6 }}>
           Access is requested only when you tap the D. If you blocked it, re-enable the microphone for this site in your
           browser’s site settings, then reload. Capture stops automatically after 10 seconds, when the match starts, or
@@ -175,7 +177,7 @@ export default function Services() {
       </div>
 
       <div className="card card-pad" style={{ marginTop: 12 }}>
-        <span className="eyebrow">Catalogue region</span>
+        <span className="eyebrow">{t('services.region')}</span>
         <p className="tiny muted" style={{ marginTop: 6 }}>
           Storefront and chart region is set on the server with <code>CATALOG_COUNTRY</code> (currently{' '}
           <b>{health?.capabilities ? 'server-configured' : '…'}</b>). It is not a per-device setting, so changing it here
@@ -192,7 +194,7 @@ export default function Services() {
             <span className="track-row-title" style={{ display: 'block' }}>
               Privacy &amp; data
             </span>
-            <span className="track-row-sub">What is stored, what is sent, and where</span>
+            <span className="track-row-sub">{t('services.privacySub')}</span>
           </span>
           <IconChevron size={16} />
         </Link>
@@ -204,7 +206,7 @@ export default function Services() {
             <span className="track-row-title" style={{ display: 'block' }}>
               Download manager
             </span>
-            <span className="track-row-sub">Authorized files, progress and errors</span>
+            <span className="track-row-sub">{t('services.downloadsSub')}</span>
           </span>
           <IconChevron size={16} />
         </Link>

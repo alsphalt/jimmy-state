@@ -1,0 +1,114 @@
+apply plugin: 'com.android.application'
+
+/**
+ * Version numbers come from android/version.properties so the APK and the update
+ * manifest published by /api/app/version are always the same numbers.
+ */
+def versionProps = new Properties()
+def versionFile = rootProject.file('version.properties')
+if (versionFile.exists()) {
+    versionFile.withInputStream { versionProps.load(it) }
+}
+def appVersionName = versionProps.getProperty('versionName', '1.1.0')
+def appVersionCode = versionProps.getProperty('versionCode', '1').toInteger()
+
+/**
+ * Release signing.
+ *
+ * The keys live in the environment (CI secrets / a local .env), never in the repo.
+ * When they are absent the release build is signed with the debug key: that keeps
+ * `assembleRelease` usable for testers, and Gradle tells you so in the log. An
+ * update can only be installed over an existing app by the same signing key, so a
+ * real distribution must always use the same JIMMY_KEYSTORE.
+ */
+def keystorePath = System.getenv('JIMMY_KEYSTORE') ?: ''
+def hasKeystore = keystorePath && file(keystorePath).exists()
+
+android {
+    namespace "com.jimmystate.app"
+    compileSdk rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "com.jimmystate.app"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode appVersionCode
+        versionName appVersionName
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+
+    signingConfigs {
+        if (hasKeystore) {
+            release {
+                storeFile file(keystorePath)
+                storePassword System.getenv('JIMMY_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('JIMMY_KEY_ALIAS')
+                keyPassword System.getenv('JIMMY_KEY_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (hasKeystore) {
+                signingConfig signingConfigs.release
+            } else {
+                logger.warn("JIMMY_KEYSTORE is not set — the release APK will be signed with the debug key and cannot update a differently-signed install.")
+                signingConfig signingConfigs.debug
+            }
+        }
+        debug {
+            applicationIdSuffix ""
+            versionNameSuffix ""
+        }
+    }
+
+    // The app ships one APK; per-ABI splits would break the single download link the
+    // update checker hands out.
+    splits {
+        abi {
+            enable false
+        }
+    }
+
+    packagingOptions {
+        resources {
+            excludes += ['META-INF/*.kotlin_module']
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

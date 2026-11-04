@@ -1,5 +1,36 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+const ROOT = path.dirname(fileURLToPath(import.meta.url))
+const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'))
+
+/**
+ * Stamp dist/sw.js with a per-build id.
+ *
+ * The service worker's cache names derive from its VERSION constant, so a build id
+ * that changes on every deploy is what makes activate() evict the previous shell and
+ * its assets. Without it a returning browser can hold an index.html whose hashed
+ * stylesheet no longer exists, which renders the entire app unstyled.
+ *
+ * public/ is copied verbatim, so the placeholder is replaced after the bundle is
+ * written. A build that has no placeholder is left untouched (nothing to stamp).
+ */
+function stampServiceWorker() {
+  return {
+    name: 'stamp-service-worker',
+    apply: 'build',
+    closeBundle() {
+      const file = path.join(ROOT, 'dist', 'sw.js')
+      if (!fs.existsSync(file)) return
+      const source = fs.readFileSync(file, 'utf8')
+      if (!source.includes('__BUILD_ID__')) return
+      const id = `${pkg.version}-${Date.now().toString(36)}`
+      fs.writeFileSync(file, source.replaceAll('__BUILD_ID__', id))
+    },
+  }
+}
 
 /**
  * Dev-server host allowlist.
@@ -58,8 +89,22 @@ const apiProxy = {
   },
 }
 
+/**
+ * The app compares its own build against the published manifest (public/app/version.json)
+ * to offer an update. Baked in at build time so the running bundle always knows its
+ * exact version, even offline.
+ */
+const [vMajor = 0, vMinor = 0, vPatch = 0] = String(pkg.version).split('.').map(Number)
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), stampServiceWorker()],
+  // One version string for all three targets. platform.js reads both to compare the
+  // running build against the published update manifest.
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+    // Same fold as scripts/build-version.mjs — Android needs a monotonic integer.
+    __APP_VERSION_CODE__: JSON.stringify(vMajor * 1_000_000 + vMinor * 1_000 + vPatch),
+  },
   server: {
     // Deliberately not process.env.PORT: the API server owns that variable.
     port: Number(process.env.VITE_PORT || 5173),

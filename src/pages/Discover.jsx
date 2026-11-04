@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { EmptyState, ErrorBlock, Loading, Segmented } from '../components/ui.jsx'
 import { TrackRow } from '../components/TrackBits.jsx'
@@ -24,6 +25,7 @@ const GENRES = [
 ]
 
 export default function Discover() {
+  const { t } = useTranslation()
   const [tab, setTab] = useState('top')
   const [charts, setCharts] = useState({ loading: true, items: [], error: null })
   const [genre, setGenre] = useState('')
@@ -68,7 +70,7 @@ export default function Discover() {
 
   return (
     <>
-      <h1>Discover</h1>
+      <h1>{t('discover.title')}</h1>
       <p className="small muted" style={{ marginTop: 4, marginBottom: 14 }}>
         Real catalogue data from Apple’s public feeds. No fabricated charts.
       </p>
@@ -89,7 +91,7 @@ export default function Discover() {
           {charts.loading && <Loading label="Loading the chart…" rows={5} />}
           {charts.error && <ErrorBlock error={charts.error} onRetry={loadCharts} />}
           {!charts.loading && !charts.error && charts.items.length === 0 && (
-            <EmptyState title="No chart data right now" />
+            <EmptyState title={t('discover.noChart')} />
           )}
           {charts.items.length > 0 && (
             <>
@@ -117,7 +119,7 @@ export default function Discover() {
           </div>
 
           <div style={{ marginTop: 18 }}>
-            {!genre && <EmptyState icon={<IconMusic size={22} />} title="Pick a genre">We search the live catalogue for that genre and show real results.</EmptyState>}
+            {!genre && <EmptyState icon={<IconMusic size={22} />} title={t('discover.pickGenre')}>{t('discover.pickGenreBody')}</EmptyState>}
             {genreResults.loading && <Loading label={`Loading ${genre}…`} rows={4} />}
             {genreResults.error && <ErrorBlock error={genreResults.error} onRetry={() => pickGenre(genre)} />}
             {!genreResults.loading && !genreResults.error && genreResults.items.length > 0 && (
@@ -162,7 +164,7 @@ export default function Discover() {
             {artists.loading && <Loading label="Searching artists…" rows={3} />}
             {artists.error && <ErrorBlock error={artists.error} onRetry={searchArtists} />}
             {!artists.loading && !artists.error && artists.done && artists.items.length === 0 && (
-              <EmptyState title="No artists matched" />
+              <EmptyState title={t('discover.noArtists')} />
             )}
             {artists.items.length > 0 && (
               <div className="list">
@@ -200,7 +202,7 @@ export default function Discover() {
               </div>
             )}
             {!artists.done && !artists.loading && (
-              <EmptyState icon={<IconMusic size={22} />} title="Find an artist">
+              <EmptyState icon={<IconMusic size={22} />} title={t('discover.findArtist')}>
                 Search a name to browse their catalogue and open tracks.
               </EmptyState>
             )}
@@ -209,7 +211,7 @@ export default function Discover() {
       )}
 
       <div className="card card-pad" style={{ marginTop: 26 }}>
-        <span className="eyebrow">How this works</span>
+        <span className="eyebrow">{t('discover.howItWorks')}</span>
         <p className="tiny muted" style={{ marginTop: 6 }}>
           Charts come from Apple’s public marketing feed; artwork and preview clips come from the iTunes Search
           API. Both are queried by this app’s server, so no keys reach your browser. Preview clips are the only audio

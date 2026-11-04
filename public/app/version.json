@@ -1,0 +1,10 @@
+{
+  "name": "jimmy-state",
+  "version": "1.1.0",
+  "versionCode": 1001000,
+  "releasedAt": "2026-11-04T08:13:44.641Z",
+  "apkUrl": "https://github.com/alsphalt/jimmy-state/releases/latest/download/jimmy-state.apk",
+  "apkSha256": null,
+  "minVersionCode": 0,
+  "notes": ""
+}

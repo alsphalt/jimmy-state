@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router-dom'
 import VideoCard from '../components/VideoCard.jsx'
 import { TrackRow } from '../components/TrackBits.jsx'
@@ -24,11 +25,11 @@ import { EQ_PRESETS, readTubePrefs, writeTubePrefs } from '../lib/tubePrefs.js'
 import { formatBytes } from '../lib/format.js'
 
 const TABS = [
-  { id: 'home', label: 'Home', Icon: IconHome },
-  { id: 'music', label: 'Music', Icon: IconMusic },
-  { id: 'videos', label: 'Videos', Icon: IconVideo },
-  { id: 'local', label: 'Local', Icon: IconDownload },
-  { id: 'settings', label: 'Settings', Icon: IconSettings },
+  { id: 'home', label: 'tube.home', Icon: IconHome },
+  { id: 'music', label: 'tube.music', Icon: IconMusic },
+  { id: 'videos', label: 'tube.videos', Icon: IconVideo },
+  { id: 'local', label: 'tube.local', Icon: IconDownload },
+  { id: 'settings', label: 'tube.settings', Icon: IconSettings },
 ]
 
 const QUICK = ['Amapiano mix', 'Afrobeats 2026', 'Gospel worship', 'Hip hop classics', 'Live session', 'Long mix']
@@ -41,8 +42,9 @@ const kindOf = (file) => {
 }
 
 export default function JimmyTube() {
+  const { t } = useTranslation()
   const [params, setParams] = useSearchParams()
-  const tab = TABS.some((t) => t.id === params.get('tab')) ? params.get('tab') : 'home'
+  const tab = TABS.some((entry) => entry.id === params.get('tab')) ? params.get('tab') : 'home'
   const initialQ = params.get('q') || ''
 
   const { chartsFeed, chartsError, reloadCharts } = useCharts()
@@ -161,7 +163,7 @@ export default function JimmyTube() {
           {recent.length > 0 && (
             <div className="tube-recent">
               <div className="row" style={{ alignItems: 'center' }}>
-                <span className="eyebrow">Recent</span>
+                <span className="eyebrow">{t('tube.recent')}</span>
                 <span className="grow" />
                 <button type="button" className="tube-link" onClick={() => clearSearches()}>
                   Clear
@@ -230,7 +232,7 @@ export default function JimmyTube() {
         <>
           <section className="tube-block">
             <div className="section-head">
-              <h2>Suggested music</h2>
+              <h2>{t('tube.suggestedMusic')}</h2>
               <Link to="/tools/tube?tab=music" className="tiny mute">
                 More
               </Link>
@@ -239,11 +241,11 @@ export default function JimmyTube() {
             {!chartsFeed.length && !chartsError && <Loading rows={2} label="Loading charts…" />}
             {chartsFeed.length > 0 && (
               <div className="rail">
-                {chartsFeed.slice(0, 12).map((t) => (
-                  <Link key={t.key} to={`/song/${encodeURIComponent(t.key)}`} state={{ track: t }} className="rail-card">
-                    <Artwork src={t.artwork} alt={t.title} style={{ borderRadius: 14 }} />
-                    <span className="rail-title clamp-2">{t.title}</span>
-                    <span className="rail-sub truncate">{t.artist}</span>
+                {chartsFeed.slice(0, 12).map((item) => (
+                  <Link key={item.key} to={`/song/${encodeURIComponent(item.key)}`} state={{ track: item }} className="rail-card">
+                    <Artwork src={item.artwork} alt={item.title} style={{ borderRadius: 14 }} />
+                    <span className="rail-title clamp-2">{item.title}</span>
+                    <span className="rail-sub truncate">{item.artist}</span>
                   </Link>
                 ))}
               </div>
@@ -252,7 +254,7 @@ export default function JimmyTube() {
 
           <section className="tube-block">
             <div className="section-head">
-              <h2>Suggested videos</h2>
+              <h2>{t('tube.suggestedVideos')}</h2>
               <Link to="/tools/tube?tab=videos" className="tiny mute">
                 More
               </Link>
@@ -265,7 +267,7 @@ export default function JimmyTube() {
       {tab === 'music' && !results.ran && (
         <section className="tube-block">
           <div className="section-head">
-            <h2>Top songs</h2>
+            <h2>{t('home.topSongs')}</h2>
           </div>
           {chartsFeed.length ? (
             <div className="list">
@@ -282,7 +284,7 @@ export default function JimmyTube() {
       {tab === 'videos' && !results.ran && (
         <section className="tube-block">
           <div className="section-head">
-            <h2>Music videos</h2>
+            <h2>{t('tube.musicVideos')}</h2>
           </div>
           <SuggestedVideos videos={[...watched.map((w) => w.video), ...watchLater.map((w) => w.video)]} always />
         </section>
@@ -301,6 +303,7 @@ export default function JimmyTube() {
 /* ------------------------------------------------------------------ pieces */
 
 function TubeNav({ tab, onTab }) {
+  const { t } = useTranslation()
   return (
     <nav className="tube-nav" aria-label="Jimmy Tube">
       {TABS.map(({ id, label, Icon }) => (
@@ -312,7 +315,7 @@ function TubeNav({ tab, onTab }) {
           onClick={() => onTab(id)}
         >
           <Icon size={18} />
-          <span>{label}</span>
+          <span>{t(label)}</span>
         </button>
       ))}
     </nav>
@@ -320,9 +323,10 @@ function TubeNav({ tab, onTab }) {
 }
 
 function FootNote() {
+  const { t } = useTranslation()
   return (
     <p className="tiny mute" style={{ marginTop: 22, textAlign: 'center' }}>
-      Playback runs through the official players. Downloads are limited to files a provider publishes.
+      {t('tube.footnote')}
     </p>
   )
 }
@@ -476,7 +480,7 @@ function LocalPanel({ prefs }) {
   return (
     <div className="tube-block">
       <div className="section-head">
-        <h2>On this phone</h2>
+        <h2>{t('tube.onThisPhone')}</h2>
         <span className="tiny mute">{files.length ? `${files.length} file${files.length === 1 ? '' : 's'}` : ''}</span>
       </div>
 
@@ -589,7 +593,7 @@ function SettingsPanel({ prefs }) {
     <>
       <section className="tube-block">
         <div className="section-head">
-          <h2>Playback</h2>
+          <h2>{t('tube.playback')}</h2>
         </div>
         <div className="card" style={{ padding: '4px 12px' }}>
           <Toggle
@@ -609,7 +613,7 @@ function SettingsPanel({ prefs }) {
 
       <section className="tube-block">
         <div className="section-head">
-          <h2>Equalizer</h2>
+          <h2>{t('tube.equalizer')}</h2>
           <span className="tiny mute">{prefs.eqEnabled ? 'On' : 'Off'}</span>
         </div>
         <div className="card" style={{ padding: '12px 14px' }}>
@@ -662,7 +666,7 @@ function SettingsPanel({ prefs }) {
 
       <section className="tube-block">
         <div className="section-head">
-          <h2>About</h2>
+          <h2>{t('settings.about')}</h2>
         </div>
         <div className="card card-pad">
           <p className="tiny muted">
