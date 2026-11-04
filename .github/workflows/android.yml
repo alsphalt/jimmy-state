@@ -46,9 +46,17 @@ jobs:
       - name: Sync the Capacitor shell
         run: npx cap sync android
 
+      # `secrets` cannot be read in a step-level `if:` (it fails to parse), so the
+      # presence check happens in the shell. Gradle itself tolerates a missing
+      # keystore and falls back to debug signing, which keeps the workflow usable
+      # before the signing secrets exist.
       - name: Restore the signing key
-        if: ${{ secrets.JIMMY_KEYSTORE_BASE64 != '' }}
-        run: echo "$JIMMY_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/jimmy-release.jks"
+        run: |
+          if [ -n "$JIMMY_KEYSTORE_BASE64" ]; then
+            echo "$JIMMY_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/jimmy-release.jks"
+          else
+            echo "::warning::No JIMMY_KEYSTORE_BASE64 secret — the APK will be debug-signed and cannot update a differently-signed install."
+          fi
         env:
           JIMMY_KEYSTORE_BASE64: ${{ secrets.JIMMY_KEYSTORE_BASE64 }}
 
@@ -58,7 +66,7 @@ jobs:
           chmod +x ./gradlew
           ./gradlew assembleRelease --no-daemon
         env:
-          JIMMY_KEYSTORE: ${{ secrets.JIMMY_KEYSTORE_BASE64 != '' && format('{0}/jimmy-release.jks', runner.temp) || '' }}
+          JIMMY_KEYSTORE: ${{ runner.temp }}/jimmy-release.jks
           JIMMY_KEYSTORE_PASSWORD: ${{ secrets.JIMMY_KEYSTORE_PASSWORD }}
           JIMMY_KEY_ALIAS: ${{ secrets.JIMMY_KEY_ALIAS }}
           JIMMY_KEY_PASSWORD: ${{ secrets.JIMMY_KEY_PASSWORD }}
