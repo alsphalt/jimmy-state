@@ -1472,7 +1472,7 @@ body.drawer-open {
    Dark neon background + DARKNOTE EVOLUTION intro
    Two effects only: floating particles (canvas) and moving neon lights (CSS).
    Sits at z-index 0 with .app raised above it, so text is never washed over.
-   ==========================================================================
+   ========================================================================== */
 .neon-bg {
   position: fixed;
   inset: 0;
