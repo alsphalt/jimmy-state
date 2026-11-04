@@ -22,6 +22,45 @@ npm start                # single server on :3001 serving dist/ + the API
 
 ---
 
+## Three targets, one app
+
+| Target | Ships as | Updates via |
+|---|---|---|
+| Website | Vercel build of `dist/` | next deploy |
+| PWA | the same bundle, installed | versioned service worker + "New version ready" bar |
+| Android APK | Capacitor shell around the same `dist/` | Settings → App update (in-app download + system installer) |
+
+Same backend, same API, same providers, same storage keys. See
+**[docs/PLATFORMS.md](docs/PLATFORMS.md)** for the build commands, signing, the update
+manifest and what survives an update.
+
+```bash
+VITE_API_BASE=https://your-deployment.example npm run android:apk   # needs JDK 21 + SDK
+git tag android-v1.2.0 && git push origin android-v1.2.0            # CI builds + publishes
+```
+
+## Languages
+
+41 interface languages (English + 40), switchable at runtime from
+**Settings → Language**, with native names, search, a checkmark on the current choice,
+right-to-left layout for Arabic, Hebrew, Persian and Urdu, and “use device language”.
+The choice is stored on the device and applied before the first paint.
+
+Transport lives in `src/i18n/` (i18next + react-i18next). Every locale is a plain JSON
+file in `src/i18n/locales/` and is loaded on demand, so adding a language means adding
+one file plus one entry in `src/i18n/languages.js`.
+
+Content that belongs to someone else is never translated: song titles, artist names,
+album names, video titles, playlist names the user typed, URLs. When a key is missing
+in a locale the string falls back to English rather than showing a raw key.
+
+```bash
+node scripts/validate-locales.mjs          # key parity, placeholders, empties
+node scripts/validate-locales.mjs fr de    # just some locales
+```
+
+---
+
 ## 1. What is actually wired up
 
 | Area | Provider | State |
@@ -367,6 +406,12 @@ Serverless constraints to know:
 
 A frontend hosted elsewhere can point at an API on another host with `VITE_API_BASE`
 (set at build time) plus `CORS_ORIGINS` on the API.
+
+The Android app runs the same bundle from `https://localhost` inside its WebView, so its
+`/api` calls are cross-origin by definition. `src/lib/api.js` therefore falls back to the
+deployed origin (`NATIVE_ORIGIN`) when `VITE_API_BASE` is unset, and the server always
+allows the WebView origins — a fresh APK talks to this deployment with no extra config.
+Set `VITE_API_BASE` for the APK build only if the API lives on a different host.
 
 ### Node host (Render, Fly, Railway, VPS)
 

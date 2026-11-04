@@ -313,7 +313,7 @@
 "settings.platform": "Piattaforma",
 "settings.build": "Compilazione {{version}}",
 "update.downloading": "Download dell’aggiornamento… {{percent}}%",
-"update.installing": "Installazione: l’app si riavvia quando Android ha finito.",
-"update.allowInstall": "Consenti le installazioni da JIMMY STATE nelle impostazioni Android, poi tocca di nuovo Scarica aggiornamento.",
-"update.permission": "Apri le impostazioni Android e consenti le installazioni da JIMMY STATE."
+"update.installing": "Installazione in corso — l’app si riavvierà quando Android avrà finito.",
+"update.allowInstall": "Consenti le installazioni da JIMMY STATE nelle impostazioni di Android, poi tocca di nuovo Scarica aggiornamento.",
+"update.permission": "Apri le impostazioni di Android e consenti le installazioni da JIMMY STATE."
 }

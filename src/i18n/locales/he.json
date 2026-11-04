@@ -313,7 +313,7 @@
 "settings.platform": "פלטפורמה",
 "settings.build": "בנייה {{version}}",
 "update.downloading": "מוריד עדכון… {{percent}}%",
-"update.installing": "מתקין — האפליקציה תופעל מחדש כשההתקנה תסתיים.",
-"update.allowInstall": "אפשרו התקנות מ-JIMMY STATE בהגדרות אנדרואיד, ואז הקישו שוב על הורדת עדכון.",
-"update.permission": "פתחו את הגדרות אנדרואיד ואפשרו התקנות מ-JIMMY STATE."
+"update.installing": "מתקין — האפליקציה תופעל מחדש כש-Android יסיים.",
+"update.allowInstall": "אפשר התקנות מ-JIMMY STATE בהגדרות Android, ולאחר מכן הקש שוב על הורדת עדכון.",
+"update.permission": "פתח את הגדרות Android ואפשר התקנות מ-JIMMY STATE."
 }

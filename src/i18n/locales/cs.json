@@ -314,6 +314,6 @@
 "settings.build": "Sestavení {{version}}",
 "update.downloading": "Stahování aktualizace… {{percent}} %",
 "update.installing": "Instalace — aplikace se restartuje, až Android dokončí instalaci.",
-"update.allowInstall": "V nastavení Androidu povol instalace z JIMMY STATE a klepni znovu na Stáhnout aktualizaci.",
-"update.permission": "Otevři nastavení Androidu a povol instalace z JIMMY STATE."
+"update.allowInstall": "V nastavení Androidu povolte instalace z JIMMY STATE a poté znovu klepněte na Stáhnout aktualizaci.",
+"update.permission": "Otevřete nastavení Androidu a povolte instalace z JIMMY STATE."
 }

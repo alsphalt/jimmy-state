@@ -313,7 +313,7 @@
 "settings.platform": "Alusta",
 "settings.build": "Koontiversio {{version}}",
 "update.downloading": "Ladataan päivitystä… {{percent}} %",
-"update.installing": "Asennetaan — sovellus käynnistyy uudelleen, kun Android on valmis.",
-"update.allowInstall": "Salli asennukset JIMMY STATEsta Android-asetuksissa ja napauta sitten Lataa päivitys uudelleen.",
-"update.permission": "Avaa Android-asetukset ja salli asennukset JIMMY STATEsta."
+"update.installing": "Asennetaan — sovellus käynnistyy uudelleen, kun Android lopettaa.",
+"update.allowInstall": "Salli asennukset JIMMY STATE -sovelluksesta Androidin asetuksissa ja napauta sitten Lataa päivitys uudelleen.",
+"update.permission": "Avaa Androidin asetukset ja salli asennukset JIMMY STATE -sovelluksesta."
 }

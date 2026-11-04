@@ -314,6 +314,6 @@
 "settings.build": "Build {{version}}",
 "update.downloading": "Downloader opdatering… {{percent}} %",
 "update.installing": "Installerer — appen genstarter, når Android er færdig.",
-"update.allowInstall": "Tillad installationer fra JIMMY STATE i Android-indstillingerne, og tryk på Download opdatering igen.",
+"update.allowInstall": "Tillad installationer fra JIMMY STATE i Android-indstillingerne, og tryk derefter på Download opdatering igen.",
 "update.permission": "Åbn Android-indstillingerne, og tillad installationer fra JIMMY STATE."
 }

@@ -312,8 +312,8 @@
 "settings.appUpdate": "تحديث التطبيق",
 "settings.platform": "المنصة",
 "settings.build": "البناء {{version}}",
-"update.downloading": "جارٍ تنزيل التحديث… {{percent}}٪",
-"update.installing": "جارٍ التثبيت — سيُعاد تشغيل التطبيق عند انتهاء Android.",
-"update.allowInstall": "اسمح بالتثبيت من JIMMY STATE في إعدادات Android، ثم اضغط تنزيل التحديث مرة أخرى.",
+"update.downloading": "جارٍ تنزيل التحديث… {{percent}}%",
+"update.installing": "جارٍ التثبيت — سيعيد التطبيق التشغيل عند انتهاء Android.",
+"update.allowInstall": "اسمح بالتثبيت من JIMMY STATE في إعدادات Android، ثم اضغط على تنزيل التحديث مرة أخرى.",
 "update.permission": "افتح إعدادات Android واسمح بالتثبيت من JIMMY STATE."
 }

@@ -313,7 +313,7 @@
 "settings.platform": "Plattform",
 "settings.build": "Build {{version}}",
 "update.downloading": "Update wird heruntergeladen… {{percent}} %",
-"update.installing": "Wird installiert – die App startet neu, sobald Android fertig ist.",
-"update.allowInstall": "Erlaube in den Android-Einstellungen Installationen von JIMMY STATE und tippe erneut auf Update herunterladen.",
+"update.installing": "Installation läuft — die App startet neu, sobald Android fertig ist.",
+"update.allowInstall": "Erlaube in den Android-Einstellungen Installationen von JIMMY STATE und tippe dann erneut auf Update herunterladen.",
 "update.permission": "Öffne die Android-Einstellungen und erlaube Installationen von JIMMY STATE."
 }

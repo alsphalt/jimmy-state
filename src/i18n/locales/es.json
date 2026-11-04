@@ -312,8 +312,8 @@
 "settings.appUpdate": "Actualización de la aplicación",
 "settings.platform": "Plataforma",
 "settings.build": "Compilación {{version}}",
-"update.downloading": "Descargando la actualización… {{percent}} %",
-"update.installing": "Instalando: la app se reinicia cuando Android termina.",
-"update.allowInstall": "Permite instalar desde JIMMY STATE en los ajustes de Android y vuelve a tocar Descargar actualización.",
-"update.permission": "Abre los ajustes de Android y permite instalar desde JIMMY STATE."
+"update.downloading": "Descargando actualización… {{percent}} %",
+"update.installing": "Instalando — la aplicación se reiniciará cuando Android termine.",
+"update.allowInstall": "Permite las instalaciones desde JIMMY STATE en los ajustes de Android y luego vuelve a tocar Descargar actualización.",
+"update.permission": "Abre los ajustes de Android y permite las instalaciones desde JIMMY STATE."
 }

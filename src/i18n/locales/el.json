@@ -313,7 +313,7 @@
 "settings.platform": "Πλατφόρμα",
 "settings.build": "Κατασκευή {{version}}",
 "update.downloading": "Λήψη ενημέρωσης… {{percent}}%",
-"update.installing": "Εγκατάσταση — η εφαρμογή επανεκκινείται όταν τελειώσει το Android.",
-"update.allowInstall": "Επιτρέψτε εγκαταστάσεις από το JIMMY STATE στις ρυθμίσεις Android και πατήστε ξανά Λήψη ενημέρωσης.",
-"update.permission": "Ανοίξτε τις ρυθμίσεις Android και επιτρέψτε εγκαταστάσεις από το JIMMY STATE."
+"update.installing": "Γίνεται εγκατάσταση — η εφαρμογή θα επανεκκινήσει όταν ολοκληρώσει το Android.",
+"update.allowInstall": "Επιτρέψτε εγκαταστάσεις από το JIMMY STATE στις Ρυθμίσεις Android και πατήστε ξανά Λήψη ενημέρωσης.",
+"update.permission": "Ανοίξτε τις Ρυθμίσεις Android και επιτρέψτε εγκαταστάσεις από το JIMMY STATE."
 }

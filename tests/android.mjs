@@ -91,6 +91,18 @@ check('the custom updater plugin is registered before the bridge starts', () => 
   assert.ok(exists('android/app/src/main/java/com/jimmystate/app/AppUpdaterPlugin.java'))
 })
 
+check('runtime permissions are requested, not just declared', () => {
+  // A manifest entry grants nothing on Android 6+. Without the request the microphone
+  // prompt never appears and getUserMedia() rejects — recognition would look broken.
+  const activity = read('android/app/src/main/java/com/jimmystate/app/MainActivity.java')
+  assert.match(activity, /ActivityCompat\.requestPermissions/)
+  assert.match(activity, /Manifest\.permission\.RECORD_AUDIO/)
+  assert.match(activity, /requestCorePermissions\(\)/)
+  // The bundled shell must keep playing after a screen lock.
+  assert.match(activity, /setMediaPlaybackRequiresUserGesture\(false\)/)
+  assert.match(activity, /setDomStorageEnabled\(true\)/)
+})
+
 check('the plugin exposes what platform.js calls', () => {
   const plugin = read('android/app/src/main/java/com/jimmystate/app/AppUpdaterPlugin.java')
   for (const method of ['getInfo', 'canInstall', 'openInstallPermission', 'openAppSettings', 'install']) {
@@ -145,6 +157,23 @@ check('native code is only reached through isNativeApp()', () => {
 check('the PWA keeps its clean URLs and the APK uses hash routes', () => {
   const main = read('src/main.jsx')
   assert.match(main, /isNativeApp\(\) \? HashRouter : BrowserRouter/)
+})
+
+/* The WebView serves the bundle from https://localhost, so a relative /api path
+ * would hit the shell itself. A native build must resolve an absolute API origin. */
+check('the APK calls an absolute API origin, not the WebView shell', () => {
+  const api = read('src/lib/api.js')
+  assert.match(api, /isNativePlatform\?\.\(\)/)
+  assert.match(api, /IS_NATIVE \? NATIVE_ORIGIN : ''/)
+  const origin = /const NATIVE_ORIGIN = '([^']+)'/.exec(api)
+  assert.ok(origin, 'NATIVE_ORIGIN is declared')
+  assert.match(origin[1], /^https:\/\//, 'the fallback origin is https')
+})
+
+check('the API accepts the app origin, so the APK needs no extra CORS setup', () => {
+  const app = read('server/app.js')
+  assert.match(app, /'https:\/\/localhost'/)
+  assert.match(app, /APP_ORIGINS/)
 })
 
 console.log(results.join('\n'))

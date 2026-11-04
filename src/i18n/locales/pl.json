@@ -313,7 +313,7 @@
 "settings.platform": "Platforma",
 "settings.build": "Kompilacja {{version}}",
 "update.downloading": "Pobieranie aktualizacji… {{percent}}%",
-"update.installing": "Instalowanie — aplikacja uruchomi się ponownie, gdy Android skończy.",
-"update.allowInstall": "Zezwól na instalowanie z JIMMY STATE w ustawieniach Androida i naciśnij ponownie Pobierz aktualizację.",
-"update.permission": "Otwórz ustawienia Androida i zezwól na instalowanie z JIMMY STATE."
+"update.installing": "Instalowanie — aplikacja uruchomi się ponownie, gdy Android zakończy.",
+"update.allowInstall": "Zezwól na instalacje z JIMMY STATE w ustawieniach Androida, a następnie ponownie dotknij Pobierz aktualizację.",
+"update.permission": "Otwórz ustawienia Androida i zezwól na instalacje z JIMMY STATE."
 }

@@ -312,8 +312,8 @@
 "settings.appUpdate": "App-update",
 "settings.platform": "Platform",
 "settings.build": "Build {{version}}",
-"update.downloading": "Update wordt gedownload… {{percent}}%",
-"update.installing": "Bezig met installeren — de app herstart zodra Android klaar is.",
-"update.allowInstall": "Sta installaties van JIMMY STATE toe in de Android-instellingen en tik opnieuw op Update downloaden.",
-"update.permission": "Open de Android-instellingen en sta installaties van JIMMY STATE toe."
+"update.downloading": "Update wordt gedownload… {{percent}} %",
+"update.installing": "Bezig met installeren — de app start opnieuw zodra Android klaar is.",
+"update.allowInstall": "Sta installaties vanuit JIMMY STATE toe in de Android-instellingen en tik daarna opnieuw op Update downloaden.",
+"update.permission": "Open de Android-instellingen en sta installaties vanuit JIMMY STATE toe."
 }

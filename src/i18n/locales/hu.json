@@ -312,8 +312,8 @@
 "settings.appUpdate": "Alkalmazásfrissítés",
 "settings.platform": "Platform",
 "settings.build": "Összeállítás {{version}}",
-"update.downloading": "Frissítés letöltése… {{percent}}%",
+"update.downloading": "Frissítés letöltése… {{percent}} %",
 "update.installing": "Telepítés — az alkalmazás újraindul, amikor az Android végzett.",
-"update.allowInstall": "Engedélyezd a JIMMY STATE telepítéseit az Android beállításaiban, majd koppints ismét a Frissítés letöltése elemre.",
-"update.permission": "Nyisd meg az Android beállításait, és engedélyezd a JIMMY STATE telepítéseit."
+"update.allowInstall": "Engedélyezze a JIMMY STATE-ből származó telepítéseket az Android beállításaiban, majd koppintson ismét a Frissítés letöltése lehetőségre.",
+"update.permission": "Nyissa meg az Android beállításait, és engedélyezze a telepítéseket a JIMMY STATE-ből."
 }

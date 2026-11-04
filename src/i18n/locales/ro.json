@@ -312,8 +312,8 @@
 "settings.appUpdate": "Actualizarea aplicației",
 "settings.platform": "Platformă",
 "settings.build": "Compilare {{version}}",
-"update.downloading": "Se descarcă actualizarea… {{percent}}%",
-"update.installing": "Se instalează — aplicația repornește când Android termină.",
-"update.allowInstall": "Permite instalările din JIMMY STATE în setările Android, apoi apasă din nou pe Descarcă actualizarea.",
+"update.downloading": "Se descarcă actualizarea… {{percent}} %",
+"update.installing": "Se instalează — aplicația se va reporni când Android termină.",
+"update.allowInstall": "Permite instalările din JIMMY STATE în setările Android, apoi atinge din nou Descarcă actualizarea.",
 "update.permission": "Deschide setările Android și permite instalările din JIMMY STATE."
 }

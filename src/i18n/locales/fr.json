@@ -313,7 +313,7 @@
 "settings.platform": "Plateforme",
 "settings.build": "Compilation {{version}}",
 "update.downloading": "Téléchargement de la mise à jour… {{percent}} %",
-"update.installing": "Installation — l’app redémarre quand Android a terminé.",
-"update.allowInstall": "Autorisez les installations depuis JIMMY STATE dans les réglages Android, puis touchez à nouveau Télécharger la mise à jour.",
+"update.installing": "Installation en cours — l’application redémarrera dès qu’Android aura terminé.",
+"update.allowInstall": "Autorisez les installations depuis JIMMY STATE dans les réglages Android, puis appuyez de nouveau sur Télécharger la mise à jour.",
 "update.permission": "Ouvrez les réglages Android et autorisez les installations depuis JIMMY STATE."
 }

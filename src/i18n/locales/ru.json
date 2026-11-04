@@ -312,8 +312,8 @@
 "settings.appUpdate": "Обновление приложения",
 "settings.platform": "Платформа",
 "settings.build": "Сборка {{version}}",
-"update.downloading": "Загрузка обновления… {{percent}}%",
+"update.downloading": "Загрузка обновления… {{percent}} %",
 "update.installing": "Установка — приложение перезапустится, когда Android закончит.",
-"update.allowInstall": "Разрешите установку из JIMMY STATE в настройках Android и снова нажмите «Скачать обновление».",
+"update.allowInstall": "Разрешите установку из JIMMY STATE в настройках Android, затем снова нажмите «Скачать обновление».",
 "update.permission": "Откройте настройки Android и разрешите установку из JIMMY STATE."
 }

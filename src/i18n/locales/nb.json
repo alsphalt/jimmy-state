@@ -312,8 +312,8 @@
 "settings.appUpdate": "Appoppdatering",
 "settings.platform": "Plattform",
 "settings.build": "Build {{version}}",
-"update.downloading": "Laster ned oppdateringen… {{percent}} %",
+"update.downloading": "Laster ned oppdatering… {{percent}} %",
 "update.installing": "Installerer — appen starter på nytt når Android er ferdig.",
-"update.allowInstall": "Tillat installasjoner fra JIMMY STATE i Android-innstillingene, og trykk på Last ned oppdatering igjen.",
+"update.allowInstall": "Tillat installasjoner fra JIMMY STATE i Android-innstillingene, og trykk deretter på Last ned oppdatering igjen.",
 "update.permission": "Åpne Android-innstillingene og tillat installasjoner fra JIMMY STATE."
 }
