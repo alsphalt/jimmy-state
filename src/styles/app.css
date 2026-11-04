@@ -1427,3 +1427,43 @@ body.drawer-open {
 [dir='rtl'] .drawer-item > svg:last-child { transform: scaleX(-1); }
 [dir='rtl'] .lang-row { text-align: start; }
 [dir='rtl'] .player-meta { text-align: right; }
+
+/* Local media: one row per file, share sits outside the play target */
+.tube-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.tube-actions .btn { flex: 0 0 auto; }
+.tube-capture {
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 16px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+}
+.tube-capture-preview {
+  width: 100%;
+  max-height: 240px;
+  border-radius: 12px;
+  background: #000;
+  object-fit: cover;
+}
+.tube-media-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 0;
+  border-radius: 14px;
+}
+.tube-media-row.is-active { background: var(--surface-2); }
+.tube-row-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 8px 6px 8px 10px;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}

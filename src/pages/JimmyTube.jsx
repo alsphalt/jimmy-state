@@ -6,9 +6,13 @@ import VideoCard from '../components/VideoCard.jsx'
 import { TrackRow } from '../components/TrackBits.jsx'
 import { Artwork, EmptyState, ErrorBlock, Loading } from '../components/ui.jsx'
 import {
+  IconCamera,
   IconCheck,
   IconDownload,
+  IconExternal,
+  IconFolder,
   IconHome,
+  IconMic,
   IconMusic,
   IconPause,
   IconPlay,
@@ -401,32 +405,48 @@ function LocalPanel({ prefs }) {
   const [playingId, setPlayingId] = useState('')
   const [error, setError] = useState(null)
   const [eqHint, setEqHint] = useState('')
+  const [capture, setCapture] = useState(null)
+  const [recording, setRecording] = useState(false)
   const audioRef = useRef(null)
   const videoRef = useRef(null)
   const inputRef = useRef(null)
   const eqRef = useRef(null)
   const urlsRef = useRef([])
+  const previewRef = useRef(null)
+  const recorderRef = useRef(null)
+  const chunksRef = useRef([])
+  const discardRef = useRef(false)
 
-  const accept = sub === 'audio' ? 'audio/*,audio/*;capture=none' : 'video/*'
+  const accept = sub === 'audio' ? 'audio/*' : 'video/*'
+
+  const addBlob = (file, kind, options = {}) => {
+    const url = URL.createObjectURL(file)
+    urlsRef.current.push(url)
+    const entry = {
+      id: `${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: file.name,
+      size: file.size,
+      kind,
+      url,
+      blob: file,
+    }
+    setFiles((prev) => [entry, ...prev])
+    if (options.play) play(entry)
+    else setSub(kind)
+    return entry
+  }
 
   const addFiles = (event) => {
     const picked = Array.from(event.target.files || [])
     event.target.value = ''
     if (!picked.length) return
+    setError(null)
     const next = picked.map((file) => {
       const url = URL.createObjectURL(file)
       urlsRef.current.push(url)
-      return {
-        id: `${file.name}-${file.size}-${Math.random().toString(36).slice(2, 7)}`,
-        name: file.name,
-        size: file.size,
-        kind: kindOf(file),
-        url,
-      }
+      return { id: `${file.name}-${file.size}-${Math.random().toString(36).slice(2, 7)}`, name: file.name, size: file.size, kind: kindOf(file), url, blob: file }
     })
-    setError(null)
     setFiles((prev) => [...next, ...prev])
-    // The picker click is the gesture, so start the first file from inside it.
     play(next[0], next)
   }
 
@@ -447,33 +467,20 @@ function LocalPanel({ prefs }) {
     setCurrent(file)
     setSub(file.kind)
     void list
-    // Starting one kind must stop the other, or the previous file keeps playing under it.
     const other = file.kind === 'video' ? audioRef.current : videoRef.current
     if (other && !other.paused) other.pause()
     if (element.getAttribute('src') !== file.url) element.src = file.url
 
     if (file.kind === 'audio' && prefs.eqEnabled) {
       const graph = attachEqualizer(element)
-      eqRef.current = graph
       if (graph) {
-        graph.resume()
-        graph.apply({ enabled: true, bass: prefs.bass, mid: prefs.mid, treble: prefs.treble })
-        if (graph.context && graph.context.state === 'suspended') {
-          setEqHint(t('tube.eqWaiting'))
-        }
+        eqRef.current = graph
+        graph.apply({ bass: prefs.eqBass, mid: prefs.eqMid, treble: prefs.eqTreble })
+      } else {
+        setEqHint('Equalizer unavailable in this browser — playing dry.')
       }
-    } else if (eqRef.current) {
-      eqRef.current.apply({ enabled: false })
     }
-
-    const started = element.play()
-    if (started && typeof started.catch === 'function') {
-      started.catch((err) => {
-        if (err && err.name === 'NotAllowedError') setError(t('tube.playAgain'))
-        else if (err && err.name === 'AbortError') return
-        else setError(t('tube.playFailed'))
-      })
-    }
+    element.play().catch(() => setEqHint('Tap play again to start audio.'))
   }
 
   const toggle = (file) => {
@@ -486,17 +493,168 @@ function LocalPanel({ prefs }) {
     play(file)
   }
 
+  // Equalizer changes apply live to whatever local file is playing.
   useEffect(() => {
-    if (eqRef.current) {
-      eqRef.current.apply({ enabled: prefs.eqEnabled, bass: prefs.bass, mid: prefs.mid, treble: prefs.treble })
-    }
-  }, [prefs.eqEnabled, prefs.bass, prefs.mid, prefs.treble])
+    if (!eqRef.current) return
+    eqRef.current.apply({ bass: prefs.eqBass, mid: prefs.eqMid, treble: prefs.eqTreble })
+  }, [prefs.eqBass, prefs.eqMid, prefs.eqTreble, prefs.eqEnabled])
 
-  // Blob URLs live as long as this panel; release them when it unmounts.
   useEffect(() => () => {
     urlsRef.current.forEach((url) => URL.revokeObjectURL(url))
-    urlsRef.current = []
+    recorderRef.current = null
   }, [])
+
+  const getStream = async (mode) => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError('This browser does not expose the camera or microphone.')
+      return null
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia(
+        mode === 'audio' ? { audio: true } : { video: { facingMode: 'environment' }, audio: true },
+      )
+      setError(null)
+      return stream
+    } catch (err) {
+      const name = err?.name || ''
+      setError(
+        name === 'NotAllowedError'
+          ? 'Permission refused. Allow camera or microphone access in the browser, then try again.'
+          : name === 'NotFoundError'
+            ? 'No camera or microphone was found on this device.'
+            : `Could not start capture (${name || 'unknown error'}).`,
+      )
+      return null
+    }
+  }
+
+  const beginRecording = (stream) => {
+    const wantsVideo = stream.getVideoTracks().length > 0
+    const preferred = wantsVideo ? ['video/webm;codecs=vp9,opus', 'video/webm', 'video/mp4'] : ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4']
+    const mimeType = preferred.find((type) => window.MediaRecorder?.isTypeSupported?.(type)) || ''
+    let recorder
+    try {
+      recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined)
+    } catch {
+      setError('This browser cannot record media.')
+      return
+    }
+    chunksRef.current = []
+    discardRef.current = false
+    recorder.ondataavailable = (event) => {
+      if (event.data?.size) chunksRef.current.push(event.data)
+    }
+    recorder.onstop = () => {
+      setRecording(false)
+      if (discardRef.current) {
+        chunksRef.current = []
+        return
+      }
+      const type = recorder.mimeType || (wantsVideo ? 'video/webm' : 'audio/webm')
+      const blob = new Blob(chunksRef.current, { type })
+      chunksRef.current = []
+      if (!blob.size) return
+      const ext = type.includes('mp4') ? 'mp4' : 'webm'
+      addBlob(new File([blob], `${wantsVideo ? 'camera' : 'recording'}-${Date.now()}.${ext}`, { type }), wantsVideo ? 'video' : 'audio')
+    }
+    recorderRef.current = recorder
+    recorder.start()
+    setRecording(true)
+  }
+
+  const openCamera = async () => {
+    const stream = await getStream('video')
+    if (!stream) return
+    setCapture({ mode: 'video', stream })
+  }
+
+  const startVoice = async () => {
+    const stream = await getStream('audio')
+    if (!stream) return
+    setCapture({ mode: 'audio', stream })
+    beginRecording(stream)
+  }
+
+  // The preview element only exists after capture starts.
+  useEffect(() => {
+    const element = previewRef.current
+    if (!element || !capture?.stream) return
+    element.srcObject = capture.stream
+    element.play?.().catch(() => {})
+  }, [capture])
+
+  const closeCapture = (discard = false) => {
+    const stream = capture?.stream
+    const recorder = recorderRef.current
+    if (recorder && recorder.state === 'recording') {
+      discardRef.current = discard
+      recorder.stop()
+    }
+    stream?.getTracks().forEach((track) => track.stop())
+    recorderRef.current = null
+    setCapture(null)
+    setRecording(false)
+  }
+
+  /** Lists a folder in one go, so nothing has to be picked file by file. */
+  const scanFolder = async () => {
+    if (!window.showDirectoryPicker) {
+      setError('This browser cannot list a folder. Use “Choose files” instead — folder scanning needs Chrome or Edge on a desktop.')
+      return
+    }
+    try {
+      const dir = await window.showDirectoryPicker({ mode: 'read' })
+      const found = []
+      const walk = async (handle, depth) => {
+        if (depth > 3 || found.length >= 300) return
+        for await (const entry of handle.values()) {
+          if (found.length >= 300) break
+          if (entry.kind === 'directory') {
+            await walk(entry, depth + 1)
+            continue
+          }
+          const kind = /\.(mp4|mkv|mov|webm|m4v|avi)$/i.test(entry.name) ? 'video' : /\.(mp3|m4a|wav|ogg|flac|aac|opus)$/i.test(entry.name) ? 'audio' : null
+          if (!kind) continue
+          const file = await entry.getFile()
+          found.push({ file, kind })
+        }
+      }
+      await walk(dir, 0)
+      if (!found.length) {
+        setError('No audio or video files in that folder.')
+        return
+      }
+      const next = found.map(({ file, kind }) => {
+        const url = URL.createObjectURL(file)
+        urlsRef.current.push(url)
+        return { id: `${file.name}-${file.size}-${Math.random().toString(36).slice(2, 7)}`, name: file.name, size: file.size, kind, url, blob: file }
+      })
+      setFiles((prev) => [...next, ...prev])
+      setSub(next[0].kind)
+      setError(null)
+    } catch (err) {
+      if (err?.name !== 'AbortError') setError('Could not read that folder.')
+    }
+  }
+
+  const shareFile = async (file) => {
+    if (!file.blob) {
+      setError('Only files picked or recorded here can be shared.')
+      return
+    }
+    const payload = file.blob instanceof File ? file.blob : new File([file.blob], file.name, { type: file.blob.type })
+    try {
+      if (navigator.canShare?.({ files: [payload] })) {
+        await navigator.share({ files: [payload], title: file.name })
+      } else if (navigator.share) {
+        await navigator.share({ title: file.name, text: file.name })
+      } else {
+        setError('Sharing is not available in this browser.')
+      }
+    } catch (err) {
+      if (err?.name !== 'AbortError') setError('Sharing was cancelled or blocked.')
+    }
+  }
 
   const shown = files.filter((file) => file.kind === sub)
   const hasFiles = files.length > 0
@@ -505,7 +663,7 @@ function LocalPanel({ prefs }) {
     <div className="tube-block">
       <div className="section-head">
         <h2>{t('tube.onThisPhone')}</h2>
-        <span className="tiny mute">{files.length ? t('tube.fileCount', { count: files.length }) : ''}</span>
+        <span className="tiny mute">{files.length ? formatBytes(files.reduce((sum, file) => sum + (file.size || 0), 0)) : ''}</span>
       </div>
 
       <div className="tube-subtabs" role="tablist" aria-label="Local media type">
@@ -524,12 +682,55 @@ function LocalPanel({ prefs }) {
       </div>
 
       <input ref={inputRef} type="file" accept={accept} multiple hidden onChange={addFiles} />
-      <button type="button" className="btn btn-primary btn-sm" style={{ marginTop: 12 }} onClick={() => inputRef.current?.click()}>
-        <IconDownload size={15} /> {t('tube.chooseFiles', { kind: sub })}
-      </button>
+
+      <div className="tube-actions">
+        <button type="button" className="btn btn-primary btn-sm" onClick={() => inputRef.current?.click()}>
+          <IconDownload size={15} /> Choose {sub} files
+        </button>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={scanFolder}>
+          <IconFolder size={15} /> Scan folder
+        </button>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={openCamera} disabled={recording}>
+          <IconCamera size={15} /> Camera
+        </button>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={startVoice} disabled={recording}>
+          <IconMic size={15} /> Record voice
+        </button>
+      </div>
+
       <p className="tiny mute" style={{ marginTop: 8 }}>
-        {t('tube.localHint')}
+        The browser asks for camera and microphone access the first time and remembers it. Nothing is uploaded — recordings stay in this tab.
       </p>
+      <p className="tiny mute" style={{ marginTop: 4 }}>
+        A browser cannot list your whole phone library by itself. “Scan folder” reads a folder you choose in one pass; “Choose files” picks individual ones.
+      </p>
+
+      {capture ? (
+        <div className="tube-capture">
+          {capture.mode === 'video' ? (
+            <video ref={previewRef} className="tube-capture-preview" autoPlay muted playsInline />
+          ) : (
+            <p className="small" style={{ margin: 0 }}>
+              <IconMic size={16} /> {recording ? 'Recording…' : 'Microphone ready'}
+            </p>
+          )}
+          <div className="row gap-8" style={{ marginTop: 8, flexWrap: 'wrap' }}>
+            {capture.mode === 'video' && !recording ? (
+              <button type="button" className="btn btn-primary btn-sm" onClick={() => beginRecording(capture.stream)}>
+                <IconPlay size={15} /> Start recording
+              </button>
+            ) : null}
+            {recording ? (
+              <button type="button" className="btn btn-primary btn-sm" onClick={() => closeCapture(false)}>
+                <IconPause size={15} /> Stop &amp; save
+              </button>
+            ) : null}
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => closeCapture(true)}>
+              <IconX size={15} /> {recording ? 'Cancel' : 'Close'}
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {error && <p className="tiny" style={{ color: 'var(--red)', marginTop: 8 }}>{error}</p>}
       {eqHint && <p className="tiny mute" style={{ marginTop: 8 }}>{eqHint}</p>}
@@ -552,24 +753,28 @@ function LocalPanel({ prefs }) {
             const active = current?.id === file.id
             const isPlaying = active && playingId === file.id
             return (
-              <button
-                key={file.id}
-                type="button"
-                className={`tube-media-row ${active ? 'is-active' : ''}`}
-                onClick={() => toggle(file)}
-                aria-label={isPlaying ? t('tube.pauseNamed', { name: file.name }) : t('tube.playNamed', { name: file.name })}
-              >
-                <span className="dl-icon" aria-hidden="true">
-                  {file.kind === 'audio' ? <IconMusic size={16} /> : <IconVideo size={16} />}
-                </span>
-                <span className="grow" style={{ minWidth: 0, textAlign: 'left' }}>
-                  <span className="track-row-title truncate" style={{ display: 'block' }}>
-                    {file.name}
+              <div key={file.id} className={`tube-media-row ${active ? 'is-active' : ''}`}>
+                <button
+                  type="button"
+                  className="tube-row-main"
+                  onClick={() => toggle(file)}
+                  aria-label={isPlaying ? `Pause ${file.name}` : `Play ${file.name}`}
+                >
+                  <span className="dl-icon" aria-hidden="true">
+                    {file.kind === 'audio' ? <IconMusic size={16} /> : <IconVideo size={16} />}
                   </span>
-                  <span className="track-row-sub">{formatBytes(file.size)}</span>
-                </span>
-                {isPlaying ? <IconPause size={16} /> : <IconPlay size={16} />}
-              </button>
+                  <span className="grow" style={{ minWidth: 0, textAlign: 'left' }}>
+                    <span className="track-row-title truncate" style={{ display: 'block' }}>
+                      {file.name}
+                    </span>
+                    <span className="track-row-sub">{formatBytes(file.size)}</span>
+                  </span>
+                  {isPlaying ? <IconPause size={16} /> : <IconPlay size={16} />}
+                </button>
+                <button type="button" className="icon-btn" onClick={() => shareFile(file)} aria-label={`Share ${file.name}`}>
+                  <IconExternal size={16} />
+                </button>
+              </div>
             )
           })}
         </div>
@@ -584,29 +789,20 @@ function LocalPanel({ prefs }) {
         style={{ width: '100%', marginTop: 12 }}
         onPlay={() => setPlayingId(current?.id || '')}
         onPause={() => setPlayingId('')}
-        onEnded={() => setPlayingId('')}
-        onError={() => current?.kind === 'audio' && setError(t('tube.audioError'))}
       />
       <video
         ref={videoRef}
         controls
         playsInline
         hidden={!hasFiles || current?.kind !== 'video'}
-        style={{ width: '100%', borderRadius: 12, marginTop: 12 }}
+        style={{ width: '100%', marginTop: 12, borderRadius: 14 }}
         onPlay={() => setPlayingId(current?.id || '')}
         onPause={() => setPlayingId('')}
-        onEnded={() => setPlayingId('')}
-        onError={() => current?.kind === 'video' && setError(t('tube.videoError'))}
       />
-
-      {current && (
-        <p className="tiny mute" style={{ marginTop: 8 }}>
-          {t('tube.playingFrom', { name: current.name })}
-        </p>
-      )}
     </div>
   )
 }
+
 
 function SettingsPanel({ prefs }) {
   const { t } = useTranslation()
