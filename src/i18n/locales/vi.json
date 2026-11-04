@@ -311,5 +311,9 @@
 "update.blocked": "Bản dựng này phải được cập nhật trước khi bạn có thể tiếp tục dùng.",
 "settings.appUpdate": "Cập nhật ứng dụng",
 "settings.platform": "Nền tảng",
-"settings.build": "Bản dựng {{version}}"
+"settings.build": "Bản dựng {{version}}",
+"update.downloading": "Đang tải bản cập nhật… {{percent}}%",
+"update.installing": "Đang cài đặt — ứng dụng sẽ khởi động lại khi Android hoàn tất.",
+"update.allowInstall": "Cho phép cài đặt từ JIMMY STATE trong Cài đặt Android, sau đó nhấn lại Tải bản cập nhật.",
+"update.permission": "Mở Cài đặt Android và cho phép cài đặt từ JIMMY STATE."
 }

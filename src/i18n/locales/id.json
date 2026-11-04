@@ -311,5 +311,9 @@
 "update.blocked": "Versi ini harus diperbarui sebelum kamu bisa terus memakainya.",
 "settings.appUpdate": "Pembaruan aplikasi",
 "settings.platform": "Platform",
-"settings.build": "Build {{version}}"
+"settings.build": "Build {{version}}",
+"update.downloading": "Mengunduh pembaruan… {{percent}}%",
+"update.installing": "Memasang — aplikasi akan dimulai ulang setelah Android selesai.",
+"update.allowInstall": "Izinkan pemasangan dari JIMMY STATE di pengaturan Android, lalu ketuk Unduh pembaruan lagi.",
+"update.permission": "Buka pengaturan Android dan izinkan pemasangan dari JIMMY STATE."
 }

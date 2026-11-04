@@ -313,7 +313,7 @@
 "settings.platform": "Platform",
 "settings.build": "Derleme {{version}}",
 "update.downloading": "Güncelleme indiriliyor… %{{percent}}",
-"update.installing": "Yükleniyor — Android bitirdiğinde uygulama yeniden başlar.",
-"update.allowInstall": "Android ayarlarında JIMMY STATE’ten yüklemeye izin ver, sonra Güncellemeyi indir’e tekrar dokun.",
-"update.permission": "Android ayarlarını aç ve JIMMY STATE’ten yüklemeye izin ver."
+"update.installing": "Yükleniyor — Android bitirdiğinde uygulama yeniden başlayacak.",
+"update.allowInstall": "Android ayarlarında JIMMY STATE'ten yüklemelere izin verin, ardından tekrar Güncellemeyi indir'e dokunun.",
+"update.permission": "Android ayarlarını açın ve JIMMY STATE'ten yüklemelere izin verin."
 }

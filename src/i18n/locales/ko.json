@@ -311,5 +311,9 @@
 "update.blocked": "이 버전은 업데이트해야 계속 사용할 수 있습니다.",
 "settings.appUpdate": "앱 업데이트",
 "settings.platform": "플랫폼",
-"settings.build": "빌드 {{version}}"
+"settings.build": "빌드 {{version}}",
+"update.downloading": "업데이트 다운로드 중… {{percent}}%",
+"update.installing": "설치 중 — Android가 완료하면 앱이 다시 시작됩니다.",
+"update.allowInstall": "Android 설정에서 JIMMY STATE의 설치를 허용한 다음 업데이트 다운로드를 다시 탭하세요.",
+"update.permission": "Android 설정을 열고 JIMMY STATE의 설치를 허용하세요."
 }

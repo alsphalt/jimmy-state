@@ -311,5 +311,9 @@
 "update.blocked": "Toleo hili linapaswa kusasishwa kabla ya kuendelea kulitumia.",
 "settings.appUpdate": "Sasisho la programu",
 "settings.platform": "Jukwaa",
-"settings.build": "Ujenzi {{version}}"
+"settings.build": "Ujenzi {{version}}",
+"update.downloading": "Inapakua sasisho… {{percent}}%",
+"update.installing": "Inasakinisha — programu itaanza upya Android ikimaliza.",
+"update.allowInstall": "Ruhusu usakinishaji kutoka JIMMY STATE katika mipangilio ya Android, kisha gusa Pakua sasisho tena.",
+"update.permission": "Fungua mipangilio ya Android na ruhusu usakinishaji kutoka JIMMY STATE."
 }

@@ -41,6 +41,14 @@ export const PLATFORM = platformName()
 export const APP_VERSION =
   (typeof __APP_VERSION__ !== 'undefined' && __APP_VERSION__) || '1.1.0'
 
+/**
+ * The same folded integer the Android build uses (see scripts/build-version.mjs), so the
+ * website and the PWA compare like-for-like instead of always finding themselves out of
+ * date in front of an integer they can never reach.
+ */
+export const APP_VERSION_CODE =
+  typeof __APP_VERSION_CODE__ === 'number' ? __APP_VERSION_CODE__ : 0
+
 /* ------------------------------------------------------- installer bridge */
 
 const pluginCache = new Map()
@@ -219,7 +227,8 @@ export async function checkForUpdate({ ignoreDismissed = false, signal } = {}) {
   // The package manager is the only trustworthy source for "what is installed":
   // a WebView can be holding a stale bundle from a previous install.
   const installed = IS_NATIVE_APP ? await getAppInfo() : null
-  const installedCode = Number(installed?.versionCode || 0)
+  // Native asks the package manager; web and PWA already know their own build.
+  const installedCode = IS_NATIVE_APP ? Number(installed?.versionCode || 0) : APP_VERSION_CODE
   const latestCode = Number(manifest.versionCode || 0)
 
   const outdated = latestCode
@@ -294,6 +303,17 @@ export async function installUpdate(manifest, { onProgress, signal } = {}) {
   })
 
   const filePath = String(written?.uri || '').replace(/^file:\/\//, '')
-  await installApk(filePath)
-  return { method: 'native', uri: written?.uri || '' }
+  try {
+    await installApk(filePath)
+    return { method: 'native', uri: written?.uri || '' }
+  } catch (err) {
+    // The custom installer plugin is the only piece that can be missing (an older APK,
+    // or a build where it failed to register). Falling back to the browser keeps the
+    // update reachable instead of leaving the user with a dead button.
+    if (err?.code === 'NO_INSTALLER') {
+      openExternal(manifest.apkUrl)
+      return { method: 'browser' }
+    }
+    throw err
+  }
 }

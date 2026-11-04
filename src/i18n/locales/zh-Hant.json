@@ -311,5 +311,9 @@
 "update.blocked": "此版本必須更新後才能繼續使用。",
 "settings.appUpdate": "應用程式更新",
 "settings.platform": "平台",
-"settings.build": "組建 {{version}}"
+"settings.build": "組建 {{version}}",
+"update.downloading": "正在下載更新… {{percent}}%",
+"update.installing": "正在安裝——Android 完成後應用程式將重新啟動。",
+"update.allowInstall": "請在 Android 設定中允許從 JIMMY STATE 安裝，然後再次點按「下載更新」。",
+"update.permission": "請開啟 Android 設定，允許從 JIMMY STATE 安裝。"
 }

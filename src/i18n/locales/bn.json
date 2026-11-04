@@ -311,5 +311,9 @@
 "update.blocked": "এই সংস্করণ আপডেট না করলে আপনি এটি ব্যবহার চালিয়ে যেতে পারবেন না।",
 "settings.appUpdate": "অ্যাপ আপডেট",
 "settings.platform": "প্ল্যাটফর্ম",
-"settings.build": "বিল্ড {{version}}"
+"settings.build": "বিল্ড {{version}}",
+"update.downloading": "আপডেট ডাউনলোড হচ্ছে… {{percent}}%",
+"update.installing": "ইনস্টল হচ্ছে — Android শেষ হলে অ্যাপটি আবার চালু হবে।",
+"update.allowInstall": "Android সেটিংসে JIMMY STATE থেকে ইনস্টল করার অনুমতি দিন, তারপর আবার আপডেট ডাউনলোড করুন চাপুন।",
+"update.permission": "Android সেটিংস খুলুন এবং JIMMY STATE থেকে ইনস্টল করার অনুমতি দিন।"
 }

@@ -311,5 +311,9 @@
 "update.blocked": "Dole a sabunta wannan sigar kafin ka ci gaba da amfani da ita.",
 "settings.appUpdate": "Sabuntawar manhaja",
 "settings.platform": "Dandali",
-"settings.build": "Gini {{version}}"
+"settings.build": "Gini {{version}}",
+"update.downloading": "Ana sauke sabuntawa… {{percent}}%",
+"update.installing": "Ana shigarwa — manhajar za ta sake farawa idan Android ya gama.",
+"update.allowInstall": "Ba da izinin shigarwa daga JIMMY STATE a cikin saitunan Android, sannan ka sake danna Sauke sabuntawa.",
+"update.permission": "Buɗe saitunan Android ka ba da izinin shigarwa daga JIMMY STATE."
 }

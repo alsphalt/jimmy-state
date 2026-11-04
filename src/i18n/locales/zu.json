@@ -311,5 +311,9 @@
 "update.blocked": "Le nguqulo kufanele ibuyekezwe ngaphambi kokuba uqhubeke uyisebenzisa.",
 "settings.appUpdate": "Isibuyekezo sohlelo",
 "settings.platform": "Inkundla",
-"settings.build": "Ukwakhiwa {{version}}"
+"settings.build": "Ukwakhiwa {{version}}",
+"update.downloading": "Kulandwa isibuyekezo… {{percent}}%",
+"update.installing": "Kuyafakwa — uhlelo luzoqala kabusha uma i-Android isiqedile.",
+"update.allowInstall": "Vumela ukufakwa okuvela ku-JIMMY STATE kuzilungiselelo ze-Android, bese ucindezela futhi ku-Landa isibuyekezo.",
+"update.permission": "Vula izilungiselelo ze-Android futhi uvumele ukufakwa okuvela ku-JIMMY STATE."
 }

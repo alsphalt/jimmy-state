@@ -311,5 +311,9 @@
 "update.blocked": "Le nguqulelo kufuneka ihlaziywe phambi kokuba uqhubeke uyisebenzisa.",
 "settings.appUpdate": "Uhlaziyo lwesetyenziso",
 "settings.platform": "Iqonga",
-"settings.build": "Ukwakhiwa {{version}}"
+"settings.build": "Ukwakhiwa {{version}}",
+"update.downloading": "Kulandwa uhlaziyo… {{percent}}%",
+"update.installing": "Kuyafakwa — usetyenziso luza kuqalisa kwakhona xa i-Android igqibile.",
+"update.allowInstall": "Vumela ukufakwa okuvela ku-JIMMY STATE kwizicwangciso ze-Android, emva koko cofa kwakhona ku-Landa uhlaziyo.",
+"update.permission": "Vula izicwangciso ze-Android kwaye uvumele ukufakwa okuvela ku-JIMMY STATE."
 }

@@ -311,5 +311,9 @@
 "update.blocked": "Noocan waa in la cusboonaysiiyo ka hor inta aadan sii isticmaalin.",
 "settings.appUpdate": "Cusboonaysiinta abka",
 "settings.platform": "Madal",
-"settings.build": "Dhismo {{version}}"
+"settings.build": "Dhismo {{version}}",
+"update.downloading": "Soo dejinta cusboonaysiinta… {{percent}}%",
+"update.installing": "Waa la rakibayaa — abku wuu dib u bilaabmi doonaa marka Android dhammeeyo.",
+"update.allowInstall": "Ka fasax rakidka ka imanaya JIMMY STATE dejinta Android, kadib mar kale taabo Soo deji cusboonaysiinta.",
+"update.permission": "Fur dejinta Android oo ka fasax rakidka ka imanaya JIMMY STATE."
 }

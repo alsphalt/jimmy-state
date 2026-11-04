@@ -311,5 +311,9 @@
 "update.blocked": "Ẹ̀yà yìí gbọ́dọ̀ ní ìmúdójúìwọ̀n kí o tó lè tẹ̀síwájú lílo rẹ̀.",
 "settings.appUpdate": "Ìmúdójúìwọ̀n ohun èlò",
 "settings.platform": "Pẹpẹ",
-"settings.build": "Ìkọ́ {{version}}"
+"settings.build": "Ìkọ́ {{version}}",
+"update.downloading": "Ń gbà ìmúdójúìwọ̀n sílẹ̀… {{percent}}%",
+"update.installing": "Ń fí i sórí ẹ̀rọ — ohun èlò yóò tún bẹ̀rẹ̀ nígbà tí Android bá parí.",
+"update.allowInstall": "Gbà ààyè fífi sílẹ̀ láti JIMMY STATE nínú ètò Android, kí o sì tẹ Gbà ìmúdójúìwọ̀n sílẹ̀ lẹ́ẹ̀kan sí.",
+"update.permission": "Ṣí ètò Android kí o sì gbà ààyè fífi sílẹ̀ láti JIMMY STATE."
 }

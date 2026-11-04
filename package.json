@@ -12,7 +12,7 @@
     "start": "node server/index.js",
     "preview": "vite preview",
     "icons": "node scripts/make-icons.mjs",
-    "test": "node scripts/make-api-routes.mjs --check && node tests/run.mjs && node tests/db.mjs && node tests/download-client.mjs && node tests/vercel-routing.mjs && node tests/android.mjs",
+    "test": "node scripts/make-api-routes.mjs --check && node tests/ssr-smoke.mjs && node tests/android.mjs && node tests/run.mjs && node tests/db.mjs && node tests/download-client.mjs && node tests/vercel-routing.mjs",
     "test:api": "node tests/run.mjs",
     "test:downloads": "node tests/download-client.mjs",
     "api:routes": "node scripts/make-api-routes.mjs",
@@ -23,7 +23,8 @@
     "android:open": "cap open android",
     "android:apk": "npm run android:sync && cd android && ./gradlew assembleRelease",
     "android:debug": "npm run android:sync && cd android && ./gradlew assembleDebug",
-    "test:android": "node tests/android.mjs"
+    "test:android": "node tests/android.mjs",
+    "test:ui": "node tests/ssr-smoke.mjs"
   },
   "engines": {
     "node": ">=18"

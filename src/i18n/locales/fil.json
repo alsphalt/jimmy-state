@@ -311,5 +311,9 @@
 "update.blocked": "Kailangang i-update ang bersyong ito bago mo ito magamit.",
 "settings.appUpdate": "Update ng app",
 "settings.platform": "Platform",
-"settings.build": "Build {{version}}"
+"settings.build": "Build {{version}}",
+"update.downloading": "Nagda-download ng update… {{percent}}%",
+"update.installing": "Nag-i-install — magre-restart ang app kapag natapos ang Android.",
+"update.allowInstall": "Payagan ang mga pag-install mula sa JIMMY STATE sa mga setting ng Android, pagkatapos ay i-tap muli ang I-download ang update.",
+"update.permission": "Buksan ang mga setting ng Android at payagan ang mga pag-install mula sa JIMMY STATE."
 }

@@ -311,5 +311,9 @@
 "update.blocked": "ต้องอัปเดตเวอร์ชันนี้ก่อนจึงจะใช้งานต่อได้",
 "settings.appUpdate": "อัปเดตแอป",
 "settings.platform": "แพลตฟอร์ม",
-"settings.build": "บิลด์ {{version}}"
+"settings.build": "บิลด์ {{version}}",
+"update.downloading": "กำลังดาวน์โหลดการอัปเดต… {{percent}}%",
+"update.installing": "กำลังติดตั้ง — แอปจะรีสตาร์ทเมื่อ Android ดำเนินการเสร็จ",
+"update.allowInstall": "อนุญาตการติดตั้งจาก JIMMY STATE ในการตั้งค่า Android แล้วแตะดาวน์โหลดการอัปเดตอีกครั้ง",
+"update.permission": "เปิดการตั้งค่า Android และอนุญาตการติดตั้งจาก JIMMY STATE"
 }

@@ -311,5 +311,9 @@
 "update.blocked": "ይህ ስሪት መጠቀሙን ከመቀጠልዎ በፊት መዘመን አለበት።",
 "settings.appUpdate": "የመተግበሪያ ዝማኔ",
 "settings.platform": "መድረክ",
-"settings.build": "ግንብ {{version}}"
+"settings.build": "ግንብ {{version}}",
+"update.downloading": "ዝማኔው በማውረድ ላይ… {{percent}}%",
+"update.installing": "በመጫን ላይ — Android ሲጨርስ መተግበሪያው እንደገና ይጀመራል።",
+"update.allowInstall": "በAndroid ቅንብሮች ውስጥ ከJIMMY STATE መጫንን ይፍቀዱ፣ ከዚያ ዝማኔ አውርድን እንደገና ይንኩ።",
+"update.permission": "የAndroid ቅንብሮችን ክፈቱ እና ከJIMMY STATE መጫንን ይፍቀዱ።"
 }

@@ -9,7 +9,7 @@ import './styles/base.css'
 import './styles/app.css'
 import { applyTheme, watchSystemTheme } from './lib/theme.js'
 import { LanguageProvider } from './i18n/LanguageProvider.jsx'
-import { applyLanguage, readLanguagePreference } from './i18n/index.js'
+import i18n, { applyLanguage, readLanguagePreference } from './i18n/index.js'
 import { checkForUpdate, isNativeApp } from './lib/platform.js'
 import { initNative, notify } from './lib/native.js'
 
@@ -66,9 +66,11 @@ if (isNativeApp()) {
     checkForUpdate()
       .then((result) => {
         if (!result.update) return
+        // Copy comes from the catalogue, so the notification is in the language the
+        // user picked — it is the one piece of text that appears outside the app.
         notify({
-          title: `JIMMY STATE ${result.manifest.version} is available`,
-          body: 'Open Settings → App update to install it. Your library and downloads are kept.',
+          title: i18n.t('update.ready'),
+          body: `${i18n.t('update.available', { version: result.manifest.version })} ${i18n.t('update.keepsData')}`,
           id: 4242,
         }).catch(() => undefined)
       })

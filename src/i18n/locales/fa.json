@@ -311,5 +311,9 @@
 "update.blocked": "این نسخه باید به‌روزرسانی شود تا بتوانید به استفاده از آن ادامه دهید.",
 "settings.appUpdate": "به‌روزرسانی برنامه",
 "settings.platform": "پلتفرم",
-"settings.build": "ساخت {{version}}"
+"settings.build": "ساخت {{version}}",
+"update.downloading": "دانلود به‌روزرسانی… {{percent}}%",
+"update.installing": "در حال نصب — پس از پایان کار Android، برنامه دوباره راه‌اندازی می‌شود.",
+"update.allowInstall": "در تنظیمات Android اجازه نصب از JIMMY STATE را بدهید، سپس دوباره روی دانلود به‌روزرسانی بزنید.",
+"update.permission": "تنظیمات Android را باز کنید و اجازه نصب از JIMMY STATE را بدهید."
 }

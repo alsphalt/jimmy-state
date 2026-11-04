@@ -311,5 +311,9 @@
 "update.blocked": "Versi ini mesti dikemas kini sebelum anda boleh terus menggunakannya.",
 "settings.appUpdate": "Kemas kini aplikasi",
 "settings.platform": "Platform",
-"settings.build": "Binaan {{version}}"
+"settings.build": "Binaan {{version}}",
+"update.downloading": "Memuat turun kemas kini… {{percent}}%",
+"update.installing": "Memasang — apl akan dimulakan semula apabila Android selesai.",
+"update.allowInstall": "Benarkan pemasangan daripada JIMMY STATE dalam tetapan Android, kemudian ketik Muat turun kemas kini sekali lagi.",
+"update.permission": "Buka tetapan Android dan benarkan pemasangan daripada JIMMY STATE."
 }

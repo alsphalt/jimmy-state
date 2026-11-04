@@ -311,5 +311,9 @@
 "update.blocked": "اس ورژن کو اپ ڈیٹ کیے بغیر آپ اسے استعمال نہیں کر سکتے۔",
 "settings.appUpdate": "ایپ اپ ڈیٹ",
 "settings.platform": "پلیٹ فارم",
-"settings.build": "بلڈ {{version}}"
+"settings.build": "بلڈ {{version}}",
+"update.downloading": "اپ ڈیٹ ڈاؤن لوڈ ہو رہا ہے… {{percent}}%",
+"update.installing": "انسٹال ہو رہا ہے — Android کے مکمل ہونے پر ایپ دوبارہ شروع ہوگی۔",
+"update.allowInstall": "Android ترتیبات میں JIMMY STATE سے انسٹال کی اجازت دیں، پھر دوبارہ اپ ڈیٹ ڈاؤن لوڈ کریں پر ٹیپ کریں۔",
+"update.permission": "Android ترتیبات کھولیں اور JIMMY STATE سے انسٹال کی اجازت دیں۔"
 }

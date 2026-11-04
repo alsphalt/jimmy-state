@@ -311,5 +311,9 @@
 "update.blocked": "このバージョンは更新するまで使用できません。",
 "settings.appUpdate": "アプリのアップデート",
 "settings.platform": "プラットフォーム",
-"settings.build": "ビルド {{version}}"
+"settings.build": "ビルド {{version}}",
+"update.downloading": "アップデートをダウンロード中… {{percent}}%",
+"update.installing": "インストール中 — Android の処理が終わるとアプリが再起動します。",
+"update.allowInstall": "Android の設定で JIMMY STATE からのインストールを許可してから、もう一度「アップデートをダウンロード」をタップしてください。",
+"update.permission": "Android の設定を開き、JIMMY STATE からのインストールを許可してください。"
 }
