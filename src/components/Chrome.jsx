@@ -16,6 +16,7 @@ import {
   IconPause,
   IconPlay,
   IconMenu,
+  IconMore,
   IconSearch,
   IconSettings,
   IconVideo,
@@ -53,6 +54,7 @@ const DRAWER_SECTIONS = [
     items: [
       { to: '/tools/tiktok', label: 'nav.tiktok', Icon: IconTikTok },
       { to: '/tools/tube', label: 'nav.tube', Icon: IconTube },
+      { to: '/tools/system', label: 'nav.system', Icon: IconMore },
     ],
   },
   {

@@ -105,6 +105,7 @@ self.addEventListener('fetch', (event) => {
     url.pathname.startsWith('/assets/') ||
     url.pathname.startsWith('/icons/') ||
     url.pathname.startsWith('/fonts/') ||
+    url.pathname.startsWith('/tools/') ||
     url.pathname === '/manifest.webmanifest' ||
     url.pathname.endsWith('.css') ||
     url.pathname.endsWith('.js')
