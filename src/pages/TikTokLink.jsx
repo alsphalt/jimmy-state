@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Artwork, Loading } from '../components/ui.jsx'
 import { IconAlert, IconChevron, IconExternal, IconLink, IconPlay } from '../components/Icons.jsx'
 import { api } from '../lib/api.js'
@@ -19,11 +19,19 @@ export default function TikTokLink() {
   const [state, setState] = useState({ loading: false, error: null, data: null })
   const { toast } = useToast()
   const { toggleSavedVideo, savedVideoIds } = useLibrary()
+  const [params] = useSearchParams()
+  const prefill = params.get('url') || ''
+  const prefilled = useRef(false)
 
-  const submit = async (event) => {
-    event.preventDefault()
-    if (state.loading) return
-    const value = url.trim()
+  // A link handed over from elsewhere (Jimmy Tube's search box) resolves on arrival.
+  useEffect(() => {
+    if (!prefill || prefilled.current) return
+    prefilled.current = true
+    setUrl(prefill)
+    void resolve(prefill)
+  }, [prefill])
+
+  const resolve = async (value) => {
     if (!value) {
       setState({ loading: false, error: 'Paste a TikTok link first.', data: null })
       return
@@ -35,6 +43,12 @@ export default function TikTokLink() {
     } catch (err) {
       setState({ loading: false, error: err.message, data: null })
     }
+  }
+
+  const submit = async (event) => {
+    event.preventDefault()
+    if (state.loading) return
+    await resolve(url.trim())
   }
 
   const onPaste = (event) => {

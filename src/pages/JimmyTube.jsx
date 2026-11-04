@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { readLink } from '../lib/links.js'
 import VideoCard from '../components/VideoCard.jsx'
 import { TrackRow } from '../components/TrackBits.jsx'
 import { Artwork, EmptyState, ErrorBlock, Loading } from '../components/ui.jsx'
@@ -9,6 +10,7 @@ import {
   IconDownload,
   IconHome,
   IconMusic,
+  IconPause,
   IconPlay,
   IconSearch,
   IconSettings,
@@ -33,11 +35,17 @@ const TABS = [
 
 const QUICK = ['Amapiano mix', 'Afrobeats 2026', 'Gospel worship', 'Hip hop classics', 'Live session', 'Long mix']
 
-const kindOf = (file) => (file.type.startsWith('video/') ? 'video' : 'audio')
+const VIDEO_EXT = /\.(mp4|m4v|webm|mov|mkv|avi|3gp)$/i
+// Android reports no MIME type for plenty of media, so fall back to the extension.
+const kindOf = (file) => {
+  if (file.type) return file.type.startsWith('video/') ? 'video' : 'audio'
+  return VIDEO_EXT.test(file.name) ? 'video' : 'audio'
+}
 
 export default function JimmyTube() {
   const { t } = useTranslation()
   const [params, setParams] = useSearchParams()
+  const navigate = useNavigate()
   const tab = TABS.some((entry) => entry.id === params.get('tab')) ? params.get('tab') : 'home'
   const initialQ = params.get('q') || ''
 
@@ -49,6 +57,7 @@ export default function JimmyTube() {
   const [term, setTerm] = useState(initialQ)
   const [results, setResults] = useState({ loading: false, items: [], error: null, ran: false, mode: '', notice: '' })
   const [sheet, setSheet] = useState(null)
+  const [notice, setNotice] = useState('')
 
   const goTab = (next) => {
     const p = new URLSearchParams(params)
@@ -80,6 +89,21 @@ export default function JimmyTube() {
     event.preventDefault()
     const q = term.trim()
     if (!q) return
+    const link = readLink(q)
+    if (link?.kind === 'youtube') {
+      setNotice('')
+      navigate(`/watch/${link.id}`)
+      return
+    }
+    if (link?.kind === 'tiktok') {
+      setNotice('')
+      navigate(`/tools/tiktok?url=${encodeURIComponent(link.url)}`)
+      return
+    }
+    if (link?.kind === 'invalid') {
+      setNotice(link.note)
+      return
+    }
     const p = new URLSearchParams(params)
     p.set('q', q)
     p.delete('tab')
@@ -205,11 +229,16 @@ export default function JimmyTube() {
 
       {results.items.length > 0 && !results.loading && tab !== 'local' && tab !== 'settings' && (
         <div style={{ marginTop: 16 }}>
+          {notice ? (
+            <p className="tiny" style={{ color: 'var(--red)', marginBottom: 8 }}>
+              {notice}
+            </p>
+          ) : null}
           {results.notice && <p className="tiny mute" style={{ marginBottom: 8 }}>{results.notice}</p>}
           {results.mode === 'videos' ? (
             <div className="video-grid">
               {results.items.map((v) => (
-                <VideoCard key={v.videoId} video={v} />
+                <VideoCard key={v.videoId} video={v} onDownload={setSheet} />
               ))}
             </div>
           ) : (
@@ -365,45 +394,97 @@ function SuggestedVideos({ videos, always = false }) {
 }
 
 function LocalPanel({ prefs }) {
+  const { t } = useTranslation()
   const [sub, setSub] = useState('audio')
   const [files, setFiles] = useState([])
   const [current, setCurrent] = useState(null)
+  const [playingId, setPlayingId] = useState('')
   const [error, setError] = useState(null)
+  const [eqHint, setEqHint] = useState('')
   const audioRef = useRef(null)
   const videoRef = useRef(null)
   const inputRef = useRef(null)
   const eqRef = useRef(null)
+  const urlsRef = useRef([])
 
-  const accept = sub === 'audio' ? 'audio/*' : 'video/*'
+  const accept = sub === 'audio' ? 'audio/*,audio/*;capture=none' : 'video/*'
 
   const addFiles = (event) => {
     const picked = Array.from(event.target.files || [])
-    if (!picked.length) return
-    const next = picked.map((file) => ({
-      id: `${file.name}-${file.size}-${Math.random().toString(36).slice(2, 7)}`,
-      name: file.name,
-      size: file.size,
-      kind: kindOf(file),
-      url: URL.createObjectURL(file),
-      type: file.type,
-    }))
-    setFiles((prev) => [...next, ...prev])
-    setCurrent(next[0])
     event.target.value = ''
+    if (!picked.length) return
+    const next = picked.map((file) => {
+      const url = URL.createObjectURL(file)
+      urlsRef.current.push(url)
+      return {
+        id: `${file.name}-${file.size}-${Math.random().toString(36).slice(2, 7)}`,
+        name: file.name,
+        size: file.size,
+        kind: kindOf(file),
+        url,
+      }
+    })
+    setError(null)
+    setFiles((prev) => [...next, ...prev])
+    // The picker click is the gesture, so start the first file from inside it.
+    play(next[0], next)
   }
 
-  useEffect(() => {
-    if (!current) return
-    const element = current.kind === 'video' ? videoRef.current : audioRef.current
+  /**
+   * Starts a file from inside the click that asked for it.
+   *
+   * Setting src and calling play() synchronously matters: a suspended AudioContext
+   * (Chrome, iOS) only resumes during a gesture, and a media element routed through a
+   * suspended context plays silently. The equalizer is therefore attached here — never in
+   * an effect — and only when it is switched on, so ordinary playback never depends on it.
+   */
+  const play = (file, list = files) => {
+    if (!file) return
+    const element = file.kind === 'video' ? videoRef.current : audioRef.current
     if (!element) return
-    const graph = attachEqualizer(element)
-    eqRef.current = graph
-    if (graph) {
-      graph.resume()
-      graph.apply({ enabled: prefs.eqEnabled, bass: prefs.bass, mid: prefs.mid, treble: prefs.treble })
+    setError(null)
+    setEqHint('')
+    setCurrent(file)
+    setSub(file.kind)
+    void list
+    // Starting one kind must stop the other, or the previous file keeps playing under it.
+    const other = file.kind === 'video' ? audioRef.current : videoRef.current
+    if (other && !other.paused) other.pause()
+    if (element.getAttribute('src') !== file.url) element.src = file.url
+
+    if (file.kind === 'audio' && prefs.eqEnabled) {
+      const graph = attachEqualizer(element)
+      eqRef.current = graph
+      if (graph) {
+        graph.resume()
+        graph.apply({ enabled: true, bass: prefs.bass, mid: prefs.mid, treble: prefs.treble })
+        if (graph.context && graph.context.state === 'suspended') {
+          setEqHint(t('tube.eqWaiting'))
+        }
+      }
+    } else if (eqRef.current) {
+      eqRef.current.apply({ enabled: false })
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current])
+
+    const started = element.play()
+    if (started && typeof started.catch === 'function') {
+      started.catch((err) => {
+        if (err && err.name === 'NotAllowedError') setError(t('tube.playAgain'))
+        else if (err && err.name === 'AbortError') return
+        else setError(t('tube.playFailed'))
+      })
+    }
+  }
+
+  const toggle = (file) => {
+    const element = file.kind === 'video' ? videoRef.current : audioRef.current
+    if (current?.id === file.id && element && !element.paused) {
+      element.pause()
+      setPlayingId('')
+      return
+    }
+    play(file)
+  }
 
   useEffect(() => {
     if (eqRef.current) {
@@ -411,13 +492,20 @@ function LocalPanel({ prefs }) {
     }
   }, [prefs.eqEnabled, prefs.bass, prefs.mid, prefs.treble])
 
+  // Blob URLs live as long as this panel; release them when it unmounts.
+  useEffect(() => () => {
+    urlsRef.current.forEach((url) => URL.revokeObjectURL(url))
+    urlsRef.current = []
+  }, [])
+
   const shown = files.filter((file) => file.kind === sub)
+  const hasFiles = files.length > 0
 
   return (
     <div className="tube-block">
       <div className="section-head">
         <h2>{t('tube.onThisPhone')}</h2>
-        <span className="tiny mute">{files.length ? `${files.length} file${files.length === 1 ? '' : 's'}` : ''}</span>
+        <span className="tiny mute">{files.length ? t('tube.fileCount', { count: files.length }) : ''}</span>
       </div>
 
       <div className="tube-subtabs" role="tablist" aria-label="Local media type">
@@ -437,89 +525,91 @@ function LocalPanel({ prefs }) {
 
       <input ref={inputRef} type="file" accept={accept} multiple hidden onChange={addFiles} />
       <button type="button" className="btn btn-primary btn-sm" style={{ marginTop: 12 }} onClick={() => inputRef.current?.click()}>
-        <IconDownload size={15} /> Choose {sub} files
+        <IconDownload size={15} /> {t('tube.chooseFiles', { kind: sub })}
       </button>
       <p className="tiny mute" style={{ marginTop: 8 }}>
-        Files are read from this device and never uploaded. They stay available until this page is closed.
+        {t('tube.localHint')}
       </p>
 
       {error && <p className="tiny" style={{ color: 'var(--red)', marginTop: 8 }}>{error}</p>}
+      {eqHint && <p className="tiny mute" style={{ marginTop: 8 }}>{eqHint}</p>}
 
       {!supportsEqualizer() && (
         <p className="tiny mute" style={{ marginTop: 8 }}>
-          This browser has no Web Audio support, so the equalizer is unavailable here.
+          {t('tube.noWebAudio')}
         </p>
       )}
 
       {shown.length === 0 ? (
         <div style={{ marginTop: 14 }}>
-          <EmptyState icon={sub === 'audio' ? <IconMusic size={22} /> : <IconVideo size={22} />} title={`No ${sub} files yet`}>
-            Pick files from this device to play them here.
+          <EmptyState icon={sub === 'audio' ? <IconMusic size={22} /> : <IconVideo size={22} />} title={t('tube.noFilesTitle', { kind: sub })}>
+            {t('tube.noFilesBody')}
           </EmptyState>
         </div>
       ) : (
         <div className="list" style={{ marginTop: 12 }}>
-          {shown.map((file) => (
-            <button
-              key={file.id}
-              type="button"
-              className={`tube-media-row ${current?.id === file.id ? 'is-active' : ''}`}
-              onClick={() => setCurrent(file)}
-            >
-              <span className="dl-icon" aria-hidden="true">
-                {file.kind === 'audio' ? <IconMusic size={16} /> : <IconVideo size={16} />}
-              </span>
-              <span className="grow" style={{ minWidth: 0, textAlign: 'left' }}>
-                <span className="track-row-title truncate" style={{ display: 'block' }}>
-                  {file.name}
+          {shown.map((file) => {
+            const active = current?.id === file.id
+            const isPlaying = active && playingId === file.id
+            return (
+              <button
+                key={file.id}
+                type="button"
+                className={`tube-media-row ${active ? 'is-active' : ''}`}
+                onClick={() => toggle(file)}
+                aria-label={isPlaying ? t('tube.pauseNamed', { name: file.name }) : t('tube.playNamed', { name: file.name })}
+              >
+                <span className="dl-icon" aria-hidden="true">
+                  {file.kind === 'audio' ? <IconMusic size={16} /> : <IconVideo size={16} />}
                 </span>
-                <span className="track-row-sub">{formatBytes(file.size)}</span>
-              </span>
-              <IconPlay size={16} />
-            </button>
-          ))}
+                <span className="grow" style={{ minWidth: 0, textAlign: 'left' }}>
+                  <span className="track-row-title truncate" style={{ display: 'block' }}>
+                    {file.name}
+                  </span>
+                  <span className="track-row-sub">{formatBytes(file.size)}</span>
+                </span>
+                {isPlaying ? <IconPause size={16} /> : <IconPlay size={16} />}
+              </button>
+            )
+          })}
         </div>
       )}
 
-      {current && current.kind === 'audio' && (
-        <div className="tube-now">
-          <div className="row" style={{ alignItems: 'center', gap: 8 }}>
-            <strong className="truncate" style={{ fontSize: 13 }}>
-              {current.name}
-            </strong>
-          </div>
-          <audio
-            ref={audioRef}
-            src={current.url}
-            controls
-            autoPlay
-            style={{ width: '100%', marginTop: 8 }}
-            onError={() => setError('This browser cannot play that file.')}
-          />
-        </div>
-      )}
+      {/* One persistent element per kind: swapping src on a live element keeps the
+          gesture-based play() working and stops the equalizer graph being rebuilt. */}
+      <audio
+        ref={audioRef}
+        controls
+        hidden={!hasFiles || current?.kind !== 'audio'}
+        style={{ width: '100%', marginTop: 12 }}
+        onPlay={() => setPlayingId(current?.id || '')}
+        onPause={() => setPlayingId('')}
+        onEnded={() => setPlayingId('')}
+        onError={() => current?.kind === 'audio' && setError(t('tube.audioError'))}
+      />
+      <video
+        ref={videoRef}
+        controls
+        playsInline
+        hidden={!hasFiles || current?.kind !== 'video'}
+        style={{ width: '100%', borderRadius: 12, marginTop: 12 }}
+        onPlay={() => setPlayingId(current?.id || '')}
+        onPause={() => setPlayingId('')}
+        onEnded={() => setPlayingId('')}
+        onError={() => current?.kind === 'video' && setError(t('tube.videoError'))}
+      />
 
-      {current && current.kind === 'video' && (
-        <div className="tube-now">
-          <video
-            ref={videoRef}
-            src={current.url}
-            controls
-            autoPlay
-            playsInline
-            style={{ width: '100%', borderRadius: 12, marginTop: 8 }}
-            onError={() => setError('This browser cannot play that file.')}
-          />
-          <strong className="truncate" style={{ fontSize: 12, display: 'block', marginTop: 6 }}>
-            {current.name}
-          </strong>
-        </div>
+      {current && (
+        <p className="tiny mute" style={{ marginTop: 8 }}>
+          {t('tube.playingFrom', { name: current.name })}
+        </p>
       )}
     </div>
   )
 }
 
 function SettingsPanel({ prefs }) {
+  const { t } = useTranslation()
   const applyPreset = (preset) => {
     writeTubePrefs({ eqPreset: preset.id, bass: preset.bass, mid: preset.mid, treble: preset.treble, eqEnabled: true })
   }

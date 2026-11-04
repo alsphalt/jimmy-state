@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom'
-import { IconClock, IconHeart, IconPlay } from './Icons.jsx'
+import { IconClock, IconDownload, IconHeart, IconPlay } from './Icons.jsx'
 import { useLibrary } from '../context/LibraryContext.jsx'
 import { formatDuration } from '../lib/format.js'
 import { normalizeVideo } from '../lib/track.js'
 
-export default function VideoCard({ video, compact = false }) {
+export default function VideoCard({ video, compact = false, onDownload }) {
   const v = normalizeVideo(video)
   const { toggleSavedVideo, toggleWatchLater, savedVideoIds, laterIds } = useLibrary()
   if (!v?.videoId) return null
@@ -37,6 +37,17 @@ export default function VideoCard({ video, compact = false }) {
           >
             <IconClock size={16} />
           </button>
+          {onDownload && v.previewUrl ? (
+            <button
+              type="button"
+              className="icon-btn"
+              style={{ width: 32, height: 32 }}
+              aria-label={`Download ${v.title}`}
+              onClick={() => onDownload(v)}
+            >
+              <IconDownload size={16} />
+            </button>
+          ) : null}
           <button
             type="button"
             className={`icon-btn ${savedVideoIds.has(v.videoId) ? 'is-on' : ''}`}
