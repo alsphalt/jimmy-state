@@ -1,5 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { BottomNav, InstallBanner, PlayerBar, TopBar, UpdateBar } from './components/Chrome.jsx'
+import Intro from './components/Intro.jsx'
+import NeonBackground from './components/NeonBackground.jsx'
 import { OfflineNote, Toasts } from './components/ui.jsx'
 import { usePlayer } from './context/PlayerContext.jsx'
 
@@ -37,8 +39,12 @@ function Page({ children, className = '' }) {
 
 export default function App() {
   return (
-    <div className="app">
-      <TopBar />
+    <>
+      {/* Outside <Routes>: the animation keeps running across navigation. */}
+      <NeonBackground />
+      <Intro />
+      <div className="app">
+        <TopBar />
       <InstallBanner />
       <UpdateBar />
       <main className="shell grow" style={{ width: '100%' }}>
@@ -67,10 +73,11 @@ export default function App() {
           <Route path="*" element={<Page><NotFound /></Page>} />
         </Routes>
       </main>
-      <PlayerBar />
-      <BottomNav />
-      <Toasts />
-    </div>
+        <PlayerBar />
+        <BottomNav />
+        <Toasts />
+      </div>
+    </>
   )
 }
 
