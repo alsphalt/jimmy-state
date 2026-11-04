@@ -371,6 +371,7 @@ function SuggestedVideos({ videos, always = false }) {
 }
 
 function LocalPanel({ prefs }) {
+  const { t } = useTranslation()
   const [sub, setSub] = useState('audio')
   const [files, setFiles] = useState([])
   const [current, setCurrent] = useState(null)
@@ -435,7 +436,7 @@ function LocalPanel({ prefs }) {
         graph.resume()
         graph.apply({ enabled: true, bass: prefs.bass, mid: prefs.mid, treble: prefs.treble })
         if (graph.context && graph.context.state === 'suspended') {
-          setEqHint('The equalizer is waiting for a tap from the system. Playback continues without it until then.')
+          setEqHint(t('tube.eqWaiting'))
         }
       }
     } else if (eqRef.current) {
@@ -445,9 +446,9 @@ function LocalPanel({ prefs }) {
     const started = element.play()
     if (started && typeof started.catch === 'function') {
       started.catch((err) => {
-        if (err && err.name === 'NotAllowedError') setError('Tap play again to start playback on this device.')
+        if (err && err.name === 'NotAllowedError') setError(t('tube.playAgain'))
         else if (err && err.name === 'AbortError') return
-        else setError('This browser could not play that file. Try another format.')
+        else setError(t('tube.playFailed'))
       })
     }
   }
@@ -481,7 +482,7 @@ function LocalPanel({ prefs }) {
     <div className="tube-block">
       <div className="section-head">
         <h2>{t('tube.onThisPhone')}</h2>
-        <span className="tiny mute">{files.length ? `${files.length} file${files.length === 1 ? '' : 's'}` : ''}</span>
+        <span className="tiny mute">{files.length ? t('tube.fileCount', { count: files.length }) : ''}</span>
       </div>
 
       <div className="tube-subtabs" role="tablist" aria-label="Local media type">
@@ -501,10 +502,10 @@ function LocalPanel({ prefs }) {
 
       <input ref={inputRef} type="file" accept={accept} multiple hidden onChange={addFiles} />
       <button type="button" className="btn btn-primary btn-sm" style={{ marginTop: 12 }} onClick={() => inputRef.current?.click()}>
-        <IconDownload size={15} /> Choose {sub} files
+        <IconDownload size={15} /> {t('tube.chooseFiles', { kind: sub })}
       </button>
       <p className="tiny mute" style={{ marginTop: 8 }}>
-        Files are read from this device and never uploaded. They stay available until this page is closed.
+        {t('tube.localHint')}
       </p>
 
       {error && <p className="tiny" style={{ color: 'var(--red)', marginTop: 8 }}>{error}</p>}
@@ -512,14 +513,14 @@ function LocalPanel({ prefs }) {
 
       {!supportsEqualizer() && (
         <p className="tiny mute" style={{ marginTop: 8 }}>
-          This browser has no Web Audio support, so the equalizer is unavailable here.
+          {t('tube.noWebAudio')}
         </p>
       )}
 
       {shown.length === 0 ? (
         <div style={{ marginTop: 14 }}>
-          <EmptyState icon={sub === 'audio' ? <IconMusic size={22} /> : <IconVideo size={22} />} title={`No ${sub} files yet`}>
-            Pick files from this device to play them here.
+          <EmptyState icon={sub === 'audio' ? <IconMusic size={22} /> : <IconVideo size={22} />} title={t('tube.noFilesTitle', { kind: sub })}>
+            {t('tube.noFilesBody')}
           </EmptyState>
         </div>
       ) : (
@@ -533,7 +534,7 @@ function LocalPanel({ prefs }) {
                 type="button"
                 className={`tube-media-row ${active ? 'is-active' : ''}`}
                 onClick={() => toggle(file)}
-                aria-label={`${isPlaying ? 'Pause' : 'Play'} ${file.name}`}
+                aria-label={isPlaying ? t('tube.pauseNamed', { name: file.name }) : t('tube.playNamed', { name: file.name })}
               >
                 <span className="dl-icon" aria-hidden="true">
                   {file.kind === 'audio' ? <IconMusic size={16} /> : <IconVideo size={16} />}
@@ -561,7 +562,7 @@ function LocalPanel({ prefs }) {
         onPlay={() => setPlayingId(current?.id || '')}
         onPause={() => setPlayingId('')}
         onEnded={() => setPlayingId('')}
-        onError={() => current?.kind === 'audio' && setError('This browser cannot play that file. Try MP3, M4A or WAV.')}
+        onError={() => current?.kind === 'audio' && setError(t('tube.audioError'))}
       />
       <video
         ref={videoRef}
@@ -572,12 +573,12 @@ function LocalPanel({ prefs }) {
         onPlay={() => setPlayingId(current?.id || '')}
         onPause={() => setPlayingId('')}
         onEnded={() => setPlayingId('')}
-        onError={() => current?.kind === 'video' && setError('This browser cannot play that video. Try MP4 (H.264).')}
+        onError={() => current?.kind === 'video' && setError(t('tube.videoError'))}
       />
 
       {current && (
         <p className="tiny mute" style={{ marginTop: 8 }}>
-          Playing from this device · {current.name}
+          {t('tube.playingFrom', { name: current.name })}
         </p>
       )}
     </div>
@@ -585,6 +586,7 @@ function LocalPanel({ prefs }) {
 }
 
 function SettingsPanel({ prefs }) {
+  const { t } = useTranslation()
   const applyPreset = (preset) => {
     writeTubePrefs({ eqPreset: preset.id, bass: preset.bass, mid: preset.mid, treble: preset.treble, eqEnabled: true })
   }
