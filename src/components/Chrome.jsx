@@ -373,22 +373,23 @@ export function PlayerBar() {
    * Nothing is extracted from it — the player streams it in place.
    */
   const openFull = async () => {
-    const query = `${current.title} ${current.artist}`
+    const query = `${current.artist} ${current.title}`
     setFinding(true)
     try {
-      const data = await api.searchVideos(query, 5)
-      const items = data.items || []
-      const preferred =
-        items.find((v) => /official|audio|lyric|topic/i.test(v.title || '')) || items[0]
-      // `mv-…` ids are the catalogue's promo clips, not the full song; only a real video
-      // id (YouTube) is worth opening in the player.
-      if (preferred?.videoId && !String(preferred.videoId).startsWith('mv-')) {
-        navigate(`/watch/${preferred.videoId}`)
+      const found = await api.resolveYoutube(query)
+      if (found?.videoId) {
+        navigate(`/watch/${found.videoId}`)
         return
       }
-      window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`, '_blank', 'noopener')
-    } catch {
-      window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`, '_blank', 'noopener')
+      throw new Error('no video')
+    } catch (err) {
+      // No key, quota, or no match: hand off to the service's own search rather than
+      // pretending a preview is the song.
+      window.open(
+        err?.searchUrl || `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
+        '_blank',
+        'noopener',
+      )
     } finally {
       setFinding(false)
     }
