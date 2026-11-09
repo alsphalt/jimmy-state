@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { Artwork, PlatformLinks } from './ui.jsx'
@@ -6,6 +7,7 @@ import { useLibrary, useToast } from '../context/LibraryContext.jsx'
 import { usePlayer } from '../context/PlayerContext.jsx'
 import { useDownloads } from '../context/DownloadsContext.jsx'
 import { normalizeTrack, trackKey } from '../lib/track.js'
+import { resolveFullTrack } from '../lib/fullTrack.js'
 import { formatDuration } from '../lib/format.js'
 
 export function useTrackActions(track) {
@@ -14,6 +16,7 @@ export function useTrackActions(track) {
   const { start, isDownloading } = useDownloads()
   const { toast } = useToast()
   const navigate = useNavigate()
+  const [resolving, setResolving] = useState(false)
   const t = normalizeTrack(track)
 
   return {
@@ -21,16 +24,41 @@ export function useTrackActions(track) {
     saved: isFavourite(t),
     isPlaying: current?.key === t.key && playing,
     downloading: isDownloading(t.key),
+    resolving,
     /**
-     * A YouTube result is the whole song, so playing it opens the video player instead
-     * of the 30-second preview player. Everything else uses the preview.
+     * Plays the whole song. A YouTube result already carries its id; a catalogue track
+     * does not, so it is resolved to the official upload first and only falls back to
+     * the clip when nothing is found.
      */
-    play: () => {
+    play: async () => {
       if (t.videoId) {
         navigate(`/watch/${t.videoId}`)
         return
       }
-      play(t)
+      if (resolving) return
+      setResolving(true)
+      try {
+        const videoId = await resolveFullTrack(t)
+        if (videoId) {
+          navigate(`/watch/${videoId}`)
+          return
+        }
+        if (t.previewUrl) {
+          play(t)
+          toast('Playing the 30-second clip', {
+            title: t.title,
+            message: 'The full upload could not be found, so this is the provider preview.',
+          })
+          return
+        }
+        toast('Nothing to play', {
+          title: t.title,
+          message: 'No video or preview is available for this track.',
+          type: 'err',
+        })
+      } finally {
+        setResolving(false)
+      }
     },
     favourite: () => toggleFavourite(t),
     download: () => {
@@ -58,7 +86,7 @@ export function TrackTile({ track, showRank = false }) {
         </Link>
         <button
           type="button"
-          className="tile-play"
+          className={`tile-play ${a.resolving ? 'is-busy' : ''}`}
           aria-label={a.isPlaying ? `Pause ${a.track.title}` : `Play preview of ${a.track.title}`}
           onClick={a.play}
         >

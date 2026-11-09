@@ -2,16 +2,20 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import VideoCard from '../components/VideoCard.jsx'
+import FormatSheet from '../components/FormatSheet.jsx'
 import { EmptyState, ErrorBlock, Loading, Section, Segmented } from '../components/ui.jsx'
 import { IconArrowLeft, IconClock, IconExternal, IconPlay, IconSearch, IconVideo } from '../components/Icons.jsx'
 import { api } from '../lib/api.js'
 import { useLibrary } from '../context/LibraryContext.jsx'
+import { useDownloads } from '../context/DownloadsContext.jsx'
 
 export default function Videos() {
   const { t } = useTranslation()
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const { watched, watchLater, savedVideoIds } = useLibrary()
+  const downloads = useDownloads()
+  const [sheet, setSheet] = useState(null)
   const [source, setSource] = useState('catalog')
   const [term, setTerm] = useState(params.get('q') || '')
   const [results, setResults] = useState({ loading: false, items: [], error: null, configured: true, ran: false })
@@ -190,7 +194,7 @@ export default function Videos() {
           </div>
           <div className="video-grid">
             {results.items.map((v) => (
-              <VideoCard key={v.videoId} video={v} />
+              <VideoCard key={v.videoId} video={v}  onDownload={setSheet} />
             ))}
           </div>
         </div>
@@ -201,7 +205,7 @@ export default function Videos() {
           <div className="hscroll">
             {watched.slice(0, 8).map((w) => (
               <div key={w.videoId} style={{ width: 210 }}>
-                <VideoCard video={w.video} />
+                <VideoCard video={w.video}  onDownload={setSheet} />
               </div>
             ))}
           </div>
@@ -213,7 +217,7 @@ export default function Videos() {
           <div className="hscroll">
             {watchLater.slice(0, 8).map((w) => (
               <div key={w.videoId} style={{ width: 210 }}>
-                <VideoCard video={w.video} />
+                <VideoCard video={w.video}  onDownload={setSheet} />
               </div>
             ))}
           </div>
@@ -248,6 +252,8 @@ export default function Videos() {
           Open YouTube <IconExternal size={12} />
         </a>
       </div>
+
+      {sheet && <FormatSheet item={sheet} downloads={downloads} onClose={() => setSheet(null)} />}
     </>
   )
 }

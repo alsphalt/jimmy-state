@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { readLink } from '../lib/links.js'
 import VideoCard from '../components/VideoCard.jsx'
+import FormatSheet from '../components/FormatSheet.jsx'
 import { TrackRow } from '../components/TrackBits.jsx'
 import { Artwork, EmptyState, ErrorBlock, Loading } from '../components/ui.jsx'
 import {
@@ -360,7 +361,7 @@ function FootNote() {
   )
 }
 
-function SuggestedVideos({ videos, always = false }) {
+function SuggestedVideos({ videos, always = false, onDownload }) {
   const [items, setItems] = useState(videos)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -392,7 +393,7 @@ function SuggestedVideos({ videos, always = false }) {
     <div className="rail rail-wide">
       {items.slice(0, 10).map((v) => (
         <div key={v.videoId} className="rail-card rail-card-video">
-          <VideoCard video={v} compact />
+          <VideoCard video={v} compact onDownload={onDownload} />
         </div>
       ))}
     </div>
@@ -919,67 +920,6 @@ function Toggle({ label, hint, checked, onChange }) {
       >
         <span />
       </button>
-    </div>
-  )
-}
-
-function FormatSheet({ item, downloads, onClose }) {
-  const video = item.video || item
-  const hasFile = Boolean(video?.previewUrl)
-  const [done, setDone] = useState(false)
-
-  useEffect(() => {
-    const onKey = (event) => event.key === 'Escape' && onClose()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
-
-  return (
-    <div className="tube-sheet-overlay" role="dialog" aria-modal="true" aria-label="Choose a format" onClick={onClose}>
-      <div className="tube-sheet" onClick={(event) => event.stopPropagation()}>
-        <div className="row" style={{ alignItems: 'center' }}>
-          <strong className="grow truncate">{video?.title || 'Download'}</strong>
-          <button type="button" className="icon-btn" aria-label="Close" onClick={onClose}>
-            <IconX size={16} />
-          </button>
-        </div>
-        <p className="tiny mute" style={{ marginTop: 2 }}>
-          {video?.artist || video?.channel || ''}
-        </p>
-
-        <button
-          type="button"
-          className="tube-format"
-          disabled={!hasFile || done}
-          onClick={() => {
-            downloads.start(video, { kind: 'video' })
-            setDone(true)
-          }}
-        >
-          <span className="dl-icon" aria-hidden="true"><IconVideo size={16} /></span>
-          <span className="grow" style={{ textAlign: 'left' }}>
-            <b>MP4 · video</b>
-            <span className="tiny mute" style={{ display: 'block' }}>
-              {hasFile ? 'Provider-published file, downloads now' : 'No downloadable file for this item'}
-            </span>
-          </span>
-          {done ? <IconCheck size={16} /> : <IconDownload size={16} />}
-        </button>
-
-        <div className="tube-format is-disabled" aria-disabled="true">
-          <span className="dl-icon" aria-hidden="true"><IconMusic size={16} /></span>
-          <span className="grow" style={{ textAlign: 'left' }}>
-            <b>MP3 · audio</b>
-            <span className="tiny mute" style={{ display: 'block' }}>
-              Providers publish no standalone audio file for this item, so there is nothing to convert.
-            </span>
-          </span>
-        </div>
-
-        <Link to="/downloads" className="btn btn-sm btn-ghost" style={{ marginTop: 12 }} onClick={onClose}>
-          Open download manager
-        </Link>
-      </div>
     </div>
   )
 }
