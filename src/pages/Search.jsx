@@ -4,6 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Artwork, EmptyState, ErrorBlock, Loading, Segmented } from '../components/ui.jsx'
 import { TrackRow } from '../components/TrackBits.jsx'
 import VideoCard from '../components/VideoCard.jsx'
+import SmartSearch from '../components/SmartSearch.jsx'
 import { IconChevron, IconDownload, IconPlay, IconSearch, IconTrash, IconX } from '../components/Icons.jsx'
 import { parseVideoId } from '../components/YouTubePlayer.jsx'
 import { api } from '../lib/api.js'
@@ -114,9 +115,8 @@ export default function Search() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQ, mode])
 
-  const submit = (event) => {
-    event.preventDefault()
-    const q = term.trim()
+  const submit = (raw) => {
+    const q = String(raw ?? term).trim()
     if (!q) return
     const next = new URLSearchParams(params)
     next.set('q', q)
@@ -149,27 +149,15 @@ export default function Search() {
   return (
     <>
       <h1>{t('search.title')}</h1>
-      <form onSubmit={submit} role="search" style={{ marginTop: 10 }}>
-        <label className="field">
-          <IconSearch size={18} className="field-icon" />
-          <input
-            value={term}
-            onChange={(e) => setTerm(e.target.value)}
-            placeholder="Songs, artists, albums, videos…"
-            aria-label="Search"
-            autoFocus={!initialQ}
-            enterKeyHint="search"
-          />
-          {term && (
-            <button type="button" className="icon-btn" style={{ width: 28, height: 28 }} aria-label="Clear search" onClick={clear}>
-              <IconX size={14} />
-            </button>
-          )}
-          <button type="submit" className="btn btn-sm btn-primary" disabled={!term.trim()}>
-            Go
-          </button>
-        </label>
-      </form>
+      <div style={{ marginTop: 10 }}>
+        <SmartSearch
+          value={term}
+          onChange={setTerm}
+          onSubmit={submit}
+          placeholder="Songs, artists, albums, videos…"
+          autoFocus={!initialQ}
+        />
+      </div>
 
       <div style={{ marginTop: 12 }}>
         <Segmented label="Search mode" value={mode} onChange={(m) => setParams({ q: term || initialQ, mode: m })} options={MODES} />

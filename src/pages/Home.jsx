@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Artwork, ErrorBlock, Loading } from '../components/ui.jsx'
 import { NotificationBell } from '../components/Notifications.jsx'
+import SmartSearch from '../components/SmartSearch.jsx'
 import { PlaylistSheet, SongSheet } from '../components/SongSheets.jsx'
 import {
   IconChevron,
@@ -177,9 +178,8 @@ export default function Home() {
     return () => observer.disconnect()
   }, [feed.hasMore, loadMore, feed.items.length])
 
-  const submit = (event) => {
-    event.preventDefault()
-    const q = term.trim()
+  const submit = (raw) => {
+    const q = String(raw ?? term).trim()
     if (!q) return
     navigate(`/search?q=${encodeURIComponent(q)}&mode=videos`)
   }
@@ -229,21 +229,13 @@ export default function Home() {
         </div>
 
         <div className="home-head-tools">
-          <form className="home-search" onSubmit={submit} role="search">
-            <IconSearch size={17} />
-            <input
-              value={term}
-              onChange={(event) => setTerm(event.target.value)}
-              placeholder="Search songs, artists, albums"
-              aria-label="Search"
-              enterKeyHint="search"
-            />
-            {term ? (
-              <button type="button" className="home-search-clear" onClick={() => setTerm('')} aria-label="Clear search">
-                ×
-              </button>
-            ) : null}
-          </form>
+          <SmartSearch
+            variant="home"
+            value={term}
+            onChange={setTerm}
+            onSubmit={submit}
+            placeholder="Search songs, artists, albums"
+          />
           <NotificationBell />
         </div>
       </header>

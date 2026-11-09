@@ -14,6 +14,7 @@ import {
   searchArtists,
   artistAlbums,
   artistSongs,
+  suggestAll,
   topSongs,
   searchMusicVideos,
   lookupMusicVideo,
@@ -456,6 +457,18 @@ app.get('/api/music/track', softLimit, async (req, res, next) => {
     const track = await lookupTrack(req.query.id, String(req.query.country || 'US').slice(0, 2))
     if (!track) return res.status(404).json({ ok: false, code: 'TRACK_NOT_FOUND', error: 'That track is not in the catalogue.' })
     res.json({ ok: true, track })
+  } catch (err) {
+    next(err)
+  }
+})
+
+app.get('/api/search/suggest', softLimit, async (req, res, next) => {
+  try {
+    const q = String(req.query.q || '').trim().slice(0, 80)
+    if (q.length < 2) return res.json({ ok: true, query: q, artists: [], albums: [], songs: [] })
+    const groups = await suggestAll(q, { country: req.query.country || 'US' })
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300')
+    res.json({ ok: true, query: q, ...groups })
   } catch (err) {
     next(err)
   }

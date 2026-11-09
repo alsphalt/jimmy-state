@@ -25,6 +25,7 @@ export function PlayerProvider({ children }) {
   const [playing, setPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
   const [duration, setDuration] = useState(0)
+  const [clipLoaded, setClipLoaded] = useState(false)
   const [error, setError] = useState(null)
 
   const [queue, setQueue] = useState([])
@@ -65,8 +66,12 @@ export function PlayerProvider({ children }) {
       // Real, device-local play history: the feed and Recently Played read this.
       recordPlay?.(entry)
       setProgress(0)
-      setDuration(Number(entry.durationMs || 0) / 1000)
+      // Zero until the element reports the clip's own length. Pre-filling with the
+      // catalogue length is what made a 30-second preview look like a 3:24 track that
+      // stopped early.
+      setDuration(0)
       setError(null)
+      setClipLoaded(false)
       try {
         await audio.play()
       } catch (err) {
@@ -90,6 +95,10 @@ export function PlayerProvider({ children }) {
     const onTime = () => {
       setProgress(audio.currentTime || 0)
       if (Number.isFinite(audio.duration) && audio.duration > 0) setDuration(audio.duration)
+    }
+    const onMeta = () => {
+      onTime()
+      setClipLoaded(true)
     }
     const finish = () => {
       if (repeatRef.current === 'one') {
@@ -133,7 +142,8 @@ export function PlayerProvider({ children }) {
     const onPause = () => setPlaying(false)
 
     audio.addEventListener('timeupdate', onTime)
-    audio.addEventListener('loadedmetadata', onTime)
+    audio.addEventListener('loadedmetadata', onMeta)
+    audio.addEventListener('durationchange', onMeta)
     audio.addEventListener('ended', finish)
     audio.addEventListener('error', onError)
     audio.addEventListener('play', onPlay)
@@ -141,7 +151,8 @@ export function PlayerProvider({ children }) {
     return () => {
       audio.pause()
       audio.removeEventListener('timeupdate', onTime)
-      audio.removeEventListener('loadedmetadata', onTime)
+      audio.removeEventListener('loadedmetadata', onMeta)
+      audio.removeEventListener('durationchange', onMeta)
       audio.removeEventListener('ended', finish)
       audio.removeEventListener('error', onError)
       audio.removeEventListener('play', onPlay)
@@ -353,11 +364,19 @@ export function PlayerProvider({ children }) {
     setError(null)
   }, [])
 
+  // What the element actually loaded vs what the catalogue says the song runs for.
+  // A provider preview is ~30 s; the difference is what used to be hidden.
+  const trackLength = Number(current?.durationMs || 0) / 1000
+  const isPreview = Boolean(current?.previewUrl) && clipLoaded && duration > 0 && trackLength > duration + 5
+
   const value = {
     current,
     playing,
     progress,
     duration,
+    trackLength,
+    isPreview,
+    clipLoaded,
     error,
     queue,
     index,

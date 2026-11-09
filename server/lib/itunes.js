@@ -141,6 +141,7 @@ export async function artistAlbums(artistId, { limit = 12, country = 'US' } = {}
       artwork: bigArtwork(r.artworkUrl100 || ''),
       trackCount: r.trackCount || 0,
       releaseDate: r.releaseDate || '',
+      artistId: r.artistId || null,
       source: 'itunes',
     }))
   cacheSet(key, list)
@@ -343,3 +344,63 @@ export async function lookupMusicVideo(trackId, country = 'US') {
 }
 
 export const _internal = { bigArtwork, cacheSize: () => cache.size }
+
+
+/**
+ * Album keyword search, for the type-ahead.
+ *
+ * `artistAlbums` can only answer "what did this artist release"; the search box needs
+ * "which albums match these words".
+ */
+export async function searchAlbums(term, { limit = 8, country = 'US' } = {}) {
+  const q = String(term || '').trim()
+  if (!q) return []
+  const key = `as:${q.toLowerCase()}:${limit}:${country}`
+  const cached = cacheGet(key)
+  if (cached) return cached
+  const data = await getJson(
+    `${BASE}/search?term=${encodeURIComponent(q)}&media=music&entity=album&limit=${limit}&country=${encodeURIComponent(country)}`,
+  )
+  const list = (data?.results || [])
+    .filter((r) => r.collectionId)
+    .map((r) => ({
+      id: `album:${r.collectionId}`,
+      collectionId: r.collectionId,
+      title: r.collectionName,
+      artist: r.artistName,
+      artistId: r.artistId || null,
+      artwork: bigArtwork(r.artworkUrl100 || ''),
+      trackCount: r.trackCount || 0,
+      releaseDate: r.releaseDate || '',
+      source: 'itunes',
+    }))
+  cacheSet(key, list)
+  return list
+}
+
+/**
+ * One request for the whole type-ahead: top artists, albums and songs for a prefix.
+ *
+ * Three catalogue lookups in parallel, trimmed per group — the UI shows a few of each,
+ * and the full search still runs from the "see all" row.
+ */
+export async function suggestAll(term, { country = 'US' } = {}) {
+  const q = String(term || '').trim().slice(0, 80)
+  if (q.length < 2) return { artists: [], albums: [], songs: [] }
+  const key = `sg:${q.toLowerCase()}:${country}`
+  const cached = cacheGet(key)
+  if (cached) return cached
+
+  const [artists, albums, songs] = await Promise.all([
+    searchArtists(q, { limit: 4 }).catch(() => []),
+    searchAlbums(q, { limit: 4 }).catch(() => []),
+    searchMusic(q, { limit: 8 }).catch(() => []),
+  ])
+  const result = {
+    artists: artists.slice(0, 4),
+    albums: albums.slice(0, 4),
+    songs: songs.filter((s) => s.previewUrl).slice(0, 6),
+  }
+  cacheSet(key, result)
+  return result
+}

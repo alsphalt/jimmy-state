@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, NavLink, useLocation } from 'react-router-dom'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import LogoD from './LogoD.jsx'
 import { Artwork } from './ui.jsx'
+import { api } from '../lib/api.js'
 import {
   IconChevron,
   IconClock,
@@ -359,8 +360,39 @@ export function PlayerBar() {
     toggleShuffle,
     cycleRepeat,
     seekTo,
+    isPreview,
+    trackLength,
   } = usePlayer()
+  const navigate = useNavigate()
+  const [finding, setFinding] = useState(false)
   if (!current) return null
+
+  /**
+   * Preview clips are what the catalogue licenses, so full-length listening goes
+   * through the authorised player: find the song's video and open the watch page.
+   * Nothing is extracted from it — the player streams it in place.
+   */
+  const openFull = async () => {
+    const query = `${current.title} ${current.artist}`
+    setFinding(true)
+    try {
+      const data = await api.searchVideos(query, 5)
+      const items = data.items || []
+      const preferred =
+        items.find((v) => /official|audio|lyric|topic/i.test(v.title || '')) || items[0]
+      // `mv-…` ids are the catalogue's promo clips, not the full song; only a real video
+      // id (YouTube) is worth opening in the player.
+      if (preferred?.videoId && !String(preferred.videoId).startsWith('mv-')) {
+        navigate(`/watch/${preferred.videoId}`)
+        return
+      }
+      window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`, '_blank', 'noopener')
+    } catch {
+      window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`, '_blank', 'noopener')
+    } finally {
+      setFinding(false)
+    }
+  }
   const pct = duration ? Math.min(100, (progress / duration) * 100) : 0
   return (
     <div className="player-bar" role="region" aria-label={t('player.region')}>
@@ -369,7 +401,16 @@ export function PlayerBar() {
         <button type="button" className="player-meta" onClick={toggle} style={{ textAlign: 'left', background: 'none' }}>
           <strong className="truncate">{current.title}</strong>
           <span className="truncate">{error || current.artist}</span>
-          <span className="player-preview-tag">{t('player.preview')}</span>
+          <span
+            className="player-preview-tag"
+            title={
+              isPreview
+                ? `${formatClock(duration)} preview of a ${formatClock(trackLength)} track`
+                : t('player.preview')
+            }
+          >
+            {isPreview ? `Preview · ${formatClock(duration)}` : t('player.preview')}
+          </span>
         </button>
 
         <div className="player-transport">
@@ -412,9 +453,25 @@ export function PlayerBar() {
           <span className="player-clock">
             {formatClock(progress)} / {formatClock(duration)}
           </span>
+          {current.previewUrl ? (
+            <button
+              type="button"
+              className="player-full"
+              onClick={openFull}
+              disabled={finding}
+              title="Play the full song in the video player"
+            >
+              {finding ? '…' : (
+                <>
+                  <span className="pf-long">Full song</span>
+                  <span className="pf-short">Full</span>
+                </>
+              )}
+            </button>
+          ) : null}
           {current.storeUrl ? (
             <a
-              className="icon-btn"
+              className="icon-btn player-store"
               href={current.storeUrl}
               target="_blank"
               rel="noreferrer noopener"

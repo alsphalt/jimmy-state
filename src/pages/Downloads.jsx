@@ -91,9 +91,11 @@ export default function Downloads() {
       <div className="notice notice-info" style={{ marginTop: 14 }}>
         <IconCheck size={16} style={{ flex: 'none', marginTop: 1 }} />
         <div>
-          <strong>What can be downloaded.</strong> Catalogue preview clips — audio (M4A) and music videos (M4V), both
-          published by Apple for preview use — plus files from hosts on the server’s authorized list. YouTube videos
-          cannot be downloaded here; the embedded player only streams them.
+          <strong>What can be downloaded.</strong> Catalogue preview clips — about 30 seconds of audio (M4A) and the
+          promo videos Apple publishes — plus files from hosts on the server’s authorized list. The catalogue licenses
+          previews only, so a full-length song is never offered as a file; use <em>Full song</em> in the player to hear
+          the whole track in the video player. YouTube videos cannot be downloaded here; the embedded player only
+          streams them.
         </div>
       </div>
 

@@ -55,6 +55,7 @@ export default function Artist() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const name = params.get('name') || 'Artist'
+  const albumParam = params.get('album') || ''
   const artistId = String(id || '').replace(/\D/g, '')
 
   const [tab, setTab] = useState('overview')
@@ -86,6 +87,16 @@ export default function Artist() {
   useEffect(() => {
     load()
   }, [load])
+
+  // An album picked in search links here with ?album=…; open that album's tracks once,
+  // as soon as the songs it refers to have arrived.
+  const albumApplied = useRef('')
+  useEffect(() => {
+    if (!albumParam || albumApplied.current === albumParam || songs.loading) return
+    albumApplied.current = albumParam
+    setAlbumFilter(albumParam)
+    setTab('songs')
+  }, [albumParam, songs.loading])
 
   const list = useMemo(() => {
     if (!albumFilter) return songs.items
@@ -528,8 +539,14 @@ function SongList({ tracks, startIndex, onPlay, onDownload, onLike, onPlaylist, 
                 className="ap-icon"
                 onClick={() => onDownload(track)}
                 disabled={!canPlay || busy}
-                aria-label={`Download ${track.title}`}
-                title={canPlay ? (busy ? 'Downloading…' : 'Download') : 'No authorized file for this track'}
+                aria-label={`Download the preview of ${track.title}`}
+                title={
+                  canPlay
+                    ? busy
+                      ? 'Downloading…'
+                      : 'Download the licensed preview (the only audio the catalogue publishes)'
+                    : 'No authorized file for this track'
+                }
               >
                 {busy ? <span className="ap-spinner" aria-hidden="true" /> : <IconDownload size={16} />}
               </button>
