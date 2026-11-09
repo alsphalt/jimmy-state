@@ -5,6 +5,7 @@ import { IconMusic, IconPlay, IconSearch, IconX } from './Icons.jsx'
 import { usePlayer } from '../context/PlayerContext.jsx'
 import { useToast } from '../context/LibraryContext.jsx'
 import { api } from '../lib/api.js'
+import { resolveFullTrack } from '../lib/fullTrack.js'
 import { hasFullTracks } from '../lib/providers.js'
 import { formatDuration } from '../lib/format.js'
 
@@ -131,13 +132,16 @@ export default function SmartSearch({
       }
       return
     }
+    // Full playback only: a suggestion opens the whole song, never a 30-second clip.
     const song = row.data
-    if (!song.previewUrl) {
-      toast('No preview for this track', { title: song.title, type: 'warn' })
+    if (song.videoId) {
+      navigate(`/watch/${song.videoId}`)
       return
     }
-    player.playQueue([song], 0)
-    toast('Playing preview', { title: `${song.title} — ${song.artist}`, type: 'ok', ttl: 1800 })
+    resolveFullTrack(song).then((videoId) => {
+      if (videoId) navigate(`/watch/${videoId}`)
+      else toast('Nothing to play', { title: song.title, message: 'No full upload was found for this track.', type: 'warn' })
+    })
   }
 
   const submit = (event) => {
@@ -148,6 +152,7 @@ export default function SmartSearch({
     }
     if (!q) return
     close()
+    window.dispatchEvent(new CustomEvent('jimmy-state:search'))
     onSubmit?.(q)
   }
 

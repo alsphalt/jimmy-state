@@ -2851,3 +2851,16 @@ body.drawer-open {
    instead of looking unresponsive. */
 .tile-play.is-busy { opacity: 0.5; animation: tile-pulse 1s ease-in-out infinite; }
 @keyframes tile-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.94); } }
+
+/* Search flash: covers the navigation, never the waiting. */
+.search-burst {
+  position: fixed;
+  inset: 0;
+  z-index: 320;
+  pointer-events: none;
+  background: radial-gradient(120% 90% at 50% 50%, #060a18 0%, #04060e 62%, #000 100%);
+  animation: burst-in 0.12s var(--ease) both, burst-out 0.22s var(--ease) 0.6s both;
+}
+.search-burst canvas { width: 100%; height: 100%; display: block; }
+@keyframes burst-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes burst-out { to { opacity: 0; } }

@@ -176,10 +176,6 @@ export default function SongDetails() {
             <IconExternal size={16} /> {t('common.fullSong')}
           </a>
         ) : null}
-        <button type="button" className="btn" onClick={a.play} disabled={!a.track.previewUrl}>
-          {a.isPlaying ? <IconPause size={16} /> : <IconPlay size={16} />}
-          {a.track.previewUrl ? (a.isPlaying ? 'Pause preview' : 'Play preview') : 'No preview'}
-        </button>
         <button
           type="button"
           className="btn"
