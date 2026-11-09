@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { BottomNav, InstallBanner, PlayerBar, TopBar, UpdateBar } from './components/Chrome.jsx'
 import Intro from './components/Intro.jsx'
+import { ReleaseWatcher } from './components/Notifications.jsx'
 import NeonBackground from './components/NeonBackground.jsx'
 import { OfflineNote, Toasts } from './components/ui.jsx'
 import { usePlayer } from './context/PlayerContext.jsx'
@@ -44,6 +45,7 @@ export default function App() {
       {/* Outside <Routes>: the animation keeps running across navigation. */}
       <NeonBackground />
       <Intro />
+      <ReleaseWatcher />
       <div className="app">
         <TopBar />
       <InstallBanner />

@@ -119,6 +119,8 @@ export const api = {
     request(`/api/music/artist?artistId=${encodeURIComponent(artistId)}&limit=${limit}`),
   albums: (artistId) => request(`/api/music/albums?artistId=${encodeURIComponent(artistId)}`),
   charts: (limit = 20) => request(`/api/music/charts?limit=${limit}`),
+  feed: (before = '', limit = 20) =>
+    request(`/api/feed?limit=${limit}${before ? `&before=${encodeURIComponent(before)}` : ''}`),
 
   catalogVideos: (q, limit = 24) => request(`/api/videos/catalog?q=${encodeURIComponent(q)}&limit=${limit}`),
   catalogVideo: (id) => request(`/api/videos/catalog?id=${encodeURIComponent(id)}`),

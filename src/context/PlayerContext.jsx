@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { normalizeTrack, trackKey } from '../lib/track.js'
-import { useToast } from './LibraryContext.jsx'
+import { useLibrary, useToast } from './LibraryContext.jsx'
 
 /**
  * Preview player — one audio element for the whole app, plus a queue.
@@ -39,6 +39,7 @@ export function PlayerProvider({ children }) {
   const loadRef = useRef(null)
 
   const { toast } = useToast()
+  const { recordPlay } = useLibrary()
 
   const setQueueState = useCallback((next, startIndex) => {
     queueRef.current = next
@@ -61,6 +62,8 @@ export function PlayerProvider({ children }) {
       audio.currentTime = 0
       audio.load()
       setCurrent(entry)
+      // Real, device-local play history: the feed and Recently Played read this.
+      recordPlay?.(entry)
       setProgress(0)
       setDuration(Number(entry.durationMs || 0) / 1000)
       setError(null)
@@ -72,7 +75,7 @@ export function PlayerProvider({ children }) {
         setPlaying(false)
       }
     },
-    [],
+    [recordPlay],
   )
   loadRef.current = load
 

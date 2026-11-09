@@ -57,6 +57,7 @@ export function normaliseItunes(item) {
     trackId: item.trackId,
     title: item.trackName || 'Unknown title',
     artist: item.artistName || 'Unknown artist',
+    artistId: item.artistId || null,
     album: item.collectionName || '',
     artwork: art,
     artworkSmall: bigArtwork(item.artworkUrl100 || '', 200),

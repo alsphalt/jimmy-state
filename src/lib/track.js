@@ -23,6 +23,7 @@ export function normalizeTrack(raw) {
     key: trackKey(raw),
     title: raw.title || 'Unknown title',
     artist: raw.artist || 'Unknown artist',
+    artistId: raw.artistId || null,
     album: raw.album || '',
     artwork: raw.artwork || raw.artworkSmall || '',
     artworkSmall: raw.artworkSmall || raw.artwork || '',

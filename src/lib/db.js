@@ -10,7 +10,7 @@
  */
 
 const DB_NAME = 'jimmy-state'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 export const STORES = {
   identifications: 'id',
@@ -21,6 +21,9 @@ export const STORES = {
   downloads: 'id',
   playlists: 'id',
   searches: 'id',
+  subscriptions: 'artistId',
+  notifications: 'id',
+  plays: 'key',
   meta: 'key',
 }
 

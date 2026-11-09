@@ -19,6 +19,7 @@ import {
   lookupMusicVideo,
 } from './lib/itunes.js'
 import { lookupMetadata, metadataConfigured } from './lib/acrMetadata.js'
+import { feedPage } from './lib/feed.js'
 import { searchVideos, relatedVideos, getVideo, youtubeConfigured, oembed } from './lib/youtube.js'
 import { assertDownloadable, sanitiseFileName, isMediaType, extensionFor, allowedHosts } from './lib/netguard.js'
 import { rateLimit } from './lib/rateLimit.js'
@@ -376,6 +377,25 @@ function videoToTrack(video) {
  * previews. The response always says which source answered, so the UI never implies a
  * preview is the whole track.
  */
+app.get('/api/feed', softLimit, noStore, async (req, res, next) => {
+  try {
+    const page = await feedPage({
+      before: req.query.before,
+      limit: req.query.limit,
+    })
+    res.json({
+      ok: true,
+      source: 'Apple iTunes catalogue, ordered by published release date',
+      count: page.items.length,
+      nextCursor: page.nextCursor,
+      hasMore: page.hasMore,
+      items: page.items,
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
 app.get('/api/music/search', softLimit, async (req, res, next) => {
   try {
     const q = String(req.query.q || '').slice(0, 120)

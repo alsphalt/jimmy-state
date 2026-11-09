@@ -9,6 +9,8 @@ const DEFAULT_SETTINGS = {
   country: 'US',
   askWhereToSave: true,
   autoplayPreview: true,
+  notifyInApp: true,
+  notifyBrowser: false,
 }
 
 const uid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
@@ -23,6 +25,9 @@ export function LibraryProvider({ children }) {
   const [downloads, setDownloads] = useState([])
   const [playlists, setPlaylists] = useState([])
   const [searches, setSearches] = useState([])
+  const [subscriptions, setSubscriptions] = useState([])
+  const [notifications, setNotifications] = useState([])
+  const [plays, setPlays] = useState([])
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [toasts, setToasts] = useState([])
   const toastTimers = useRef(new Map())
@@ -47,7 +52,7 @@ export function LibraryProvider({ children }) {
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      const [ids, favs, vids, later, seen, dls, pls, hist, meta] = await Promise.all([
+      const [ids, favs, vids, later, seen, dls, pls, hist, subs, notes, played, meta] = await Promise.all([
         db.getAll('identifications').catch(() => []),
         db.getAll('favourites').catch(() => []),
         db.getAll('videos').catch(() => []),
@@ -56,6 +61,9 @@ export function LibraryProvider({ children }) {
         db.getAll('downloads').catch(() => []),
         db.getAll('playlists').catch(() => []),
         db.getAll('searches').catch(() => []),
+        db.getAll('subscriptions').catch(() => []),
+        db.getAll('notifications').catch(() => []),
+        db.getAll('plays').catch(() => []),
         db.getAll('meta').catch(() => []),
       ])
       if (cancelled) return
@@ -68,6 +76,9 @@ export function LibraryProvider({ children }) {
       setDownloads(dls.sort(byNewest).slice(0, 60))
       setPlaylists(pls.sort(byNewest))
       setSearches(hist.sort(byNewest).slice(0, 20))
+      setSubscriptions(subs.sort(byNewest))
+      setNotifications(notes.sort(byNewest).slice(0, 120))
+      setPlays(played.sort((a, b) => new Date(b.lastAt || 0) - new Date(a.lastAt || 0)).slice(0, 60))
       const saved = meta.find((m) => m.key === 'settings')
       if (saved?.value) setSettings({ ...DEFAULT_SETTINGS, ...saved.value })
       setReady(true)
@@ -297,9 +308,170 @@ export function LibraryProvider({ children }) {
     setDownloads([])
     setPlaylists([])
     setSearches([])
+    setSubscriptions([])
+    setNotifications([])
+    setPlays([])
     setSettings(DEFAULT_SETTINGS)
     toast('Local library erased', { title: 'Done', type: 'ok' })
   }, [toast])
+
+  /* --------------------------------------------------------- subscriptions */
+
+  const subscribedIds = useMemo(
+    () => new Set(subscriptions.map((entry) => String(entry.artistId))),
+    [subscriptions],
+  )
+
+  const isSubscribed = useCallback(
+    (artistId) => subscribedIds.has(String(artistId || '')),
+    [subscribedIds],
+  )
+
+  /**
+   * Follow an artist on this device.
+   *
+   * `latest` is the newest release known at the moment of subscribing, stored as the
+   * watermark the release watcher compares against — so following someone does not
+   * immediately produce a notification for a song that was already out.
+   */
+  const subscribe = useCallback(
+    async ({ artistId, name, artwork = '', latest = null }) => {
+      const id = String(artistId || '')
+      if (!id) return null
+      const record = {
+        artistId: id,
+        name: String(name || 'Artist').slice(0, 120),
+        artwork: artwork || '',
+        at: new Date().toISOString(),
+        watermark: latest?.releaseDate || '',
+        watermarkTrackId: latest?.trackId || null,
+      }
+      setSubscriptions((list) => [record, ...list.filter((entry) => String(entry.artistId) !== id)])
+      await db.put('subscriptions', record).catch(() => {})
+      toast('Subscribed', { title: record.name, type: 'ok', ttl: 2200 })
+      return record
+    },
+    [toast],
+  )
+
+  const unsubscribe = useCallback(
+    async (artistId) => {
+      const id = String(artistId || '')
+      setSubscriptions((list) => list.filter((entry) => String(entry.artistId) !== id))
+      await db.del('subscriptions', id).catch(() => {})
+      toast('Unsubscribed', { type: 'info', ttl: 1800 })
+    },
+    [toast],
+  )
+
+  const toggleSubscription = useCallback(
+    async (artist) => {
+      const id = String(artist?.artistId || artist?.id || '')
+      if (!id) return
+      if (subscribedIds.has(id)) return unsubscribe(id)
+      return subscribe(artist)
+    },
+    [subscribe, subscribedIds, unsubscribe],
+  )
+
+  /** Move the watermark forward once the watcher has reported a release. */
+  const markReleaseSeen = useCallback(async (artistId, latest) => {
+    const id = String(artistId || '')
+    let updated = null
+    setSubscriptions((list) =>
+      list.map((entry) => {
+        if (String(entry.artistId) !== id) return entry
+        updated = {
+          ...entry,
+          watermark: latest?.releaseDate || entry.watermark,
+          watermarkTrackId: latest?.trackId || entry.watermarkTrackId,
+        }
+        return updated
+      }),
+    )
+    if (updated) await db.put('subscriptions', updated).catch(() => {})
+  }, [])
+
+  /* --------------------------------------------------------- notifications */
+
+  const unreadCount = useMemo(() => notifications.filter((n) => !n.read).length, [notifications])
+
+  /**
+   * One notification per release: the id is derived from the track id, so a watcher
+   * that runs twice (or two tabs) cannot create a duplicate row.
+   */
+  const addNotification = useCallback(async (entry) => {
+    const id = entry.id || `release:${entry.trackId || entry.track?.trackId || uid()}`
+    const record = {
+      at: new Date().toISOString(),
+      type: 'release',
+      ...entry,
+      id,
+      read: false,
+    }
+    let created = false
+    setNotifications((list) => {
+      if (list.some((n) => n.id === id)) return list
+      created = true
+      return [record, ...list].slice(0, 120)
+    })
+    if (created) await db.put('notifications', record).catch(() => {})
+    return created
+  }, [])
+
+  const markNotificationRead = useCallback(async (id) => {
+    let updated = null
+    setNotifications((list) =>
+      list.map((n) => {
+        if (n.id !== id) return n
+        updated = { ...n, read: true }
+        return updated
+      }),
+    )
+    if (updated) await db.put('notifications', updated).catch(() => {})
+  }, [])
+
+  const markAllNotificationsRead = useCallback(async () => {
+    const next = notifications.map((n) => ({ ...n, read: true }))
+    setNotifications(next)
+    await Promise.all(next.map((n) => db.put('notifications', n).catch(() => {})))
+  }, [notifications])
+
+  const removeNotification = useCallback(async (id) => {
+    setNotifications((list) => list.filter((n) => n.id !== id))
+    await db.del('notifications', id).catch(() => {})
+  }, [])
+
+  const clearNotifications = useCallback(async () => {
+    setNotifications([])
+    await Promise.all(notifications.map((n) => db.del('notifications', n.id).catch(() => {})))
+  }, [notifications])
+
+  /* ----------------------------------------------------------- play history */
+
+  /** Every play is recorded once per track, with a running count — real, device-local. */
+  const recordPlay = useCallback(async (track) => {
+    const normalized = normalizeTrack(track)
+    if (!normalized?.key) return
+    let record = null
+    setPlays((list) => {
+      const existing = list.find((entry) => entry.key === normalized.key)
+      record = {
+        key: normalized.key,
+        track: normalized,
+        count: (existing?.count || 0) + 1,
+        firstAt: existing?.firstAt || new Date().toISOString(),
+        lastAt: new Date().toISOString(),
+      }
+      return [record, ...list.filter((entry) => entry.key !== normalized.key)].slice(0, 60)
+    })
+    if (record) await db.put('plays', record).catch(() => {})
+  }, [])
+
+  const playCountFor = useCallback(
+    (track) => plays.find((entry) => entry.key === trackKey(track))?.count || 0,
+    [plays],
+  )
 
   const counts = useMemo(
     () => ({
@@ -310,8 +482,10 @@ export function LibraryProvider({ children }) {
       downloads: downloads.length,
       playlists: playlists.length,
       searches: searches.length,
+      subscriptions: subscriptions.length,
+      notifications: notifications.length,
     }),
-    [identifications, favourites, videos, watchLater, downloads, playlists, searches],
+    [identifications, favourites, videos, watchLater, downloads, playlists, searches, subscriptions, notifications],
   )
 
   const value = {
@@ -326,6 +500,23 @@ export function LibraryProvider({ children }) {
     searches,
     settings,
     counts,
+    subscriptions,
+    subscribedIds,
+    isSubscribed,
+    subscribe,
+    unsubscribe,
+    toggleSubscription,
+    markReleaseSeen,
+    notifications,
+    unreadCount,
+    addNotification,
+    markNotificationRead,
+    markAllNotificationsRead,
+    removeNotification,
+    clearNotifications,
+    plays,
+    recordPlay,
+    playCountFor,
     favouriteKeys,
     savedVideoIds,
     laterIds,
