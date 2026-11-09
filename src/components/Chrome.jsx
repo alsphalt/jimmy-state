@@ -13,8 +13,13 @@ import {
   IconTube,
   IconHome,
   IconLibrary,
+  IconNext,
   IconPause,
   IconPlay,
+  IconPrev,
+  IconRepeat,
+  IconRepeatOne,
+  IconShuffle,
   IconMenu,
   IconMore,
   IconSearch,
@@ -24,6 +29,7 @@ import {
 } from './Icons.jsx'
 import { useTranslation } from 'react-i18next'
 import { usePlayer } from '../context/PlayerContext.jsx'
+import { formatClock } from '../lib/format.js'
 import { useInstallPrompt } from '../lib/install.js'
 
 /* ------------------------------------------------------------------ top bar */
@@ -338,39 +344,106 @@ export function BottomNav() {
 /* --------------------------------------------------------------- player bar */
 export function PlayerBar() {
   const { t } = useTranslation()
-  const { current, playing, progress, duration, toggle, close, error } = usePlayer()
+  const {
+    current,
+    playing,
+    progress,
+    duration,
+    toggle,
+    close,
+    error,
+    next,
+    prev,
+    shuffle,
+    repeat,
+    toggleShuffle,
+    cycleRepeat,
+    seekTo,
+  } = usePlayer()
   if (!current) return null
   const pct = duration ? Math.min(100, (progress / duration) * 100) : 0
   return (
     <div className="player-bar" role="region" aria-label={t('player.region')}>
-      <Artwork src={current.artworkSmall || current.artwork} alt="" className="player-art" />
-      <button type="button" className="player-meta" onClick={toggle} style={{ textAlign: 'left', background: 'none' }}>
-        <strong className="truncate">{current.title}</strong>
-        <span className="truncate">{error || current.artist}</span>
-        <span className="player-preview-tag">{t('player.preview')}</span>
-      </button>
-      {current.storeUrl ? (
-        <a
-          className="icon-btn"
-          href={current.storeUrl}
-          target="_blank"
-          rel="noreferrer noopener"
-          aria-label={t('common.fullSong')}
-          title={t('common.fullSong')}
-          style={{ fontSize: 15, fontWeight: 700 }}
-        >
-          ↗
-        </a>
-      ) : null}
-      <button type="button" className="icon-btn" onClick={toggle} aria-label={playing ? t('player.pausePreview') : t('player.playPreview')}>
-        {playing ? <IconPause size={20} /> : <IconPlay size={20} />}
-      </button>
-      <button type="button" className="icon-btn" onClick={close} aria-label={t('player.close')}>
-        <IconX size={18} />
-      </button>
-      <div className="player-progress" aria-hidden="true">
-        <i style={{ width: `${pct}%` }} />
+      <div className="player-row">
+        <Artwork src={current.artworkSmall || current.artwork} alt="" className="player-art" />
+        <button type="button" className="player-meta" onClick={toggle} style={{ textAlign: 'left', background: 'none' }}>
+          <strong className="truncate">{current.title}</strong>
+          <span className="truncate">{error || current.artist}</span>
+          <span className="player-preview-tag">{t('player.preview')}</span>
+        </button>
+
+        <div className="player-transport">
+          <button
+            type="button"
+            className={`icon-btn player-mode${shuffle ? ' is-on' : ''}`}
+            onClick={toggleShuffle}
+            aria-pressed={shuffle}
+            aria-label="Shuffle"
+            title={shuffle ? 'Shuffle on' : 'Shuffle off'}
+          >
+            <IconShuffle size={16} />
+          </button>
+          <button type="button" className="icon-btn" onClick={prev} aria-label="Previous track" title="Previous">
+            <IconPrev size={17} />
+          </button>
+          <button
+            type="button"
+            className="player-play"
+            onClick={toggle}
+            aria-label={playing ? t('player.pausePreview') : t('player.playPreview')}
+          >
+            {playing ? <IconPause size={18} /> : <IconPlay size={18} />}
+          </button>
+          <button type="button" className="icon-btn" onClick={next} aria-label="Next track" title="Next">
+            <IconNext size={17} />
+          </button>
+          <button
+            type="button"
+            className={`icon-btn player-mode${repeat !== 'off' ? ' is-on' : ''}`}
+            onClick={cycleRepeat}
+            aria-label={`Repeat: ${repeat}`}
+            title={`Repeat: ${repeat}`}
+          >
+            {repeat === 'one' ? <IconRepeatOne size={16} /> : <IconRepeat size={16} />}
+          </button>
+        </div>
+
+        <div className="player-right">
+          <span className="player-clock">
+            {formatClock(progress)} / {formatClock(duration)}
+          </span>
+          {current.storeUrl ? (
+            <a
+              className="icon-btn"
+              href={current.storeUrl}
+              target="_blank"
+              rel="noreferrer noopener"
+              aria-label={t('common.fullSong')}
+              title={t('common.fullSong')}
+              style={{ fontSize: 15, fontWeight: 700 }}
+            >
+              ↗
+            </a>
+          ) : null}
+          <button type="button" className="icon-btn" onClick={close} aria-label={t('player.close')}>
+            <IconX size={18} />
+          </button>
+        </div>
       </div>
+
+      <label className="player-scrub">
+        <span className="sr-only">Seek</span>
+        <input
+          type="range"
+          min="0"
+          max={duration || 0}
+          step="0.1"
+          value={Math.min(progress || 0, duration || 0)}
+          onChange={(event) => seekTo(Number(event.target.value))}
+          style={{ '--seek': `${pct}%` }}
+          aria-valuetext={`${formatClock(progress)} of ${formatClock(duration)}`}
+        />
+      </label>
     </div>
   )
 }

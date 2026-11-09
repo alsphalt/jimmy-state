@@ -13,6 +13,7 @@ import {
   lookupTrack,
   searchArtists,
   artistAlbums,
+  artistSongs,
   topSongs,
   searchMusicVideos,
   lookupMusicVideo,
@@ -458,6 +459,20 @@ app.get('/api/music/albums', softLimit, async (req, res, next) => {
     }
     const items = await artistAlbums(req.query.artistId, { limit: Math.min(Number(req.query.limit) || 12, 25) })
     res.json({ ok: true, items })
+  } catch (err) {
+    next(err)
+  }
+})
+
+app.get('/api/music/artist', softLimit, async (req, res, next) => {
+  try {
+    if (!req.query.artistId) {
+      return res.status(400).json({ ok: false, code: 'MISSING_ID', error: 'Provide ?artistId=.' })
+    }
+    const items = await artistSongs(req.query.artistId, {
+      limit: Math.min(Number(req.query.limit) || 50, 100),
+    })
+    res.json({ ok: true, artistId: String(req.query.artistId), count: items.length, items })
   } catch (err) {
     next(err)
   }

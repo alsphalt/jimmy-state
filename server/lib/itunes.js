@@ -147,6 +147,42 @@ export async function artistAlbums(artistId, { limit = 12, country = 'US' } = {}
 }
 
 /**
+ * An artist's tracks, from the same catalogue.
+ *
+ * The artist page needs songs that can actually be played and saved, so this asks for
+ * `entity=song` rather than reusing the keyword search (which is YouTube-backed now and
+ * carries no audio file or duration). Each item keeps the published `previewUrl` and
+ * `trackTimeMillis`, which is what the card duration and the player use.
+ */
+export async function artistSongs(artistId, { limit = 50, country = 'US' } = {}) {
+  const id = String(artistId || '').replace(/\D/g, '')
+  if (!id) return []
+  const capped = Math.min(Math.max(Number(limit) || 50, 1), 100)
+  const key = `as:${id}:${capped}:${country}`
+  const cached = cacheGet(key)
+  if (cached) return cached
+  const data = await getJson(
+    `${BASE}/lookup?id=${id}&entity=song&limit=${capped}&country=${encodeURIComponent(country)}`,
+  )
+  // The same recording comes back once per release it appears on, sometimes with a
+  // different track id, so the list is de-duplicated by title+album+duration: a card
+  // per recording, not per pressing.
+  const seen = new Set()
+  const list = []
+  for (const row of data?.results || []) {
+    if (row.wrapperType !== 'track' || row.kind !== 'song' || !row.trackId) continue
+    const track = normaliseItunes(row)
+    if (!track) continue
+    const signature = `${track.title.toLowerCase()}::${track.album.toLowerCase()}::${track.durationMs}`
+    if (seen.has(signature)) continue
+    seen.add(signature)
+    list.push(track)
+  }
+  cacheSet(key, list)
+  return list
+}
+
+/**
  * Real chart data, no key and no fabrication.
  * Primary: Apple's public marketing feed. Fallback: the legacy iTunes top-songs RSS,
  * which serves the same chart and is reachable from networks the marketing feed

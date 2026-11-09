@@ -1,141 +1,714 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { Artwork, EmptyState, ErrorBlock, Loading, Section } from '../components/ui.jsx'
-import { TrackRow } from '../components/TrackBits.jsx'
-import { IconChevron, IconMusic } from '../components/Icons.jsx'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Artwork, EmptyState, ErrorBlock, Loading } from '../components/ui.jsx'
+import {
+  IconArrowLeft,
+  IconCheck,
+  IconChevron,
+  IconDownload,
+  IconExternal,
+  IconHeart,
+  IconList,
+  IconMore,
+  IconMusic,
+  IconNext,
+  IconPause,
+  IconPlay,
+  IconPlus,
+  IconQueue,
+  IconShare,
+  IconShuffle,
+  IconX,
+} from '../components/Icons.jsx'
 import { api } from '../lib/api.js'
+import { usePlayer } from '../context/PlayerContext.jsx'
+import { useLibrary, useToast } from '../context/LibraryContext.jsx'
+import { useDownloads } from '../context/DownloadsContext.jsx'
+import { formatDuration, plural } from '../lib/format.js'
+import { trackKey } from '../lib/track.js'
 
 /**
- * Artist page: /artist/:id?name=…
+ * Artist page — glassmorphism / midnight-purple.
  *
- * Before this existed, tapping an artist threw the name into a video search, so an
- * artist row never opened the artist — it opened whatever YouTube matched. This page
- * keeps the two real sources separate and honest:
+ * Every control here is wired to something real:
+ *   play      → PlayerContext queue (this artist's songs)
+ *   download  → DownloadsContext → /api/downloads/resolve + /file, provider file only
+ *   like      → LibraryContext favourites (IndexedDB)
+ *   playlist  → LibraryContext playlists (IndexedDB)
+ *   more      → queue / album filter / store link / clipboard
+ *   share     → navigator.share or clipboard
  *
- *   albums  → /api/music/albums?artistId=  (Apple catalogue, the artist the row named)
- *   songs   → /api/music/search?q=         (full-length YouTube results for the name)
- *
- * The songs block is labelled as search results, not as "this artist's discography",
- * because a keyword search cannot promise that. If the catalogue has no albums the
- * page says so instead of showing an empty grid.
+ * Nothing about listeners, followers or events is shown, because the catalogue this app
+ * reads does not publish them — the header states the counts that are real and where
+ * they came from instead.
  */
+
+const TABS = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'songs', label: 'Songs' },
+  { id: 'albums', label: 'Albums' },
+  { id: 'about', label: 'About' },
+]
+
+const previewOf = (track) => String(track?.previewUrl || '')
+
 export default function Artist() {
   const { id } = useParams()
   const [params] = useSearchParams()
+  const navigate = useNavigate()
   const name = params.get('name') || 'Artist'
   const artistId = String(id || '').replace(/\D/g, '')
 
-  const [albums, setAlbums] = useState({ loading: true, items: [], error: null })
+  const [tab, setTab] = useState('overview')
+  const [albumFilter, setAlbumFilter] = useState('')
   const [songs, setSongs] = useState({ loading: true, items: [], error: null })
+  const [albums, setAlbums] = useState({ loading: true, items: [], error: null })
+  const [sheet, setSheet] = useState(null)
+  const [playlistFor, setPlaylistFor] = useState(null)
 
-  const loadAlbums = useCallback(async () => {
+  const load = useCallback(async () => {
+    setSongs({ loading: true, items: [], error: null })
     setAlbums({ loading: true, items: [], error: null })
-    if (!artistId) {
-      setAlbums({ loading: false, items: [], error: null })
-      return
+    const [songsResult, albumsResult] = await Promise.allSettled([
+      artistId ? api.artistSongs(artistId, 50) : Promise.resolve({ items: [] }),
+      artistId ? api.albums(artistId) : Promise.resolve({ items: [] }),
+    ])
+    if (songsResult.status === 'fulfilled') {
+      setSongs({ loading: false, items: songsResult.value.items || [], error: null })
+    } else {
+      setSongs({ loading: false, items: [], error: songsResult.reason?.message || 'Could not load songs.' })
     }
-    try {
-      const data = await api.albums(artistId)
-      setAlbums({ loading: false, items: data.items || [], error: null })
-    } catch (err) {
-      setAlbums({ loading: false, items: [], error: err.message })
+    if (albumsResult.status === 'fulfilled') {
+      setAlbums({ loading: false, items: albumsResult.value.items || [], error: null })
+    } else {
+      setAlbums({ loading: false, items: [], error: albumsResult.reason?.message || 'Could not load albums.' })
     }
   }, [artistId])
 
-  const loadSongs = useCallback(async () => {
-    setSongs({ loading: true, items: [], error: null })
-    try {
-      const data = await api.searchMusic(name, 20)
-      setSongs({ loading: false, items: data.items || [], error: null })
-    } catch (err) {
-      setSongs({ loading: false, items: [], error: err.message })
-    }
-  }, [name])
-
   useEffect(() => {
-    loadAlbums()
-    loadSongs()
-  }, [loadAlbums, loadSongs])
+    load()
+  }, [load])
+
+  const list = useMemo(() => {
+    if (!albumFilter) return songs.items
+    return songs.items.filter((track) => track.album === albumFilter)
+  }, [songs.items, albumFilter])
+
+  const releases = useMemo(
+    () =>
+      [...albums.items].sort((a, b) => String(b.releaseDate || '').localeCompare(String(a.releaseDate || ''))),
+    [albums.items],
+  )
+
+  const heroArt = releases[0]?.artwork || songs.items[0]?.artwork || ''
+  const genres = useMemo(() => {
+    const set = new Set(songs.items.map((track) => track.genre).filter(Boolean))
+    return [...set].slice(0, 3)
+  }, [songs.items])
+  const totalMs = songs.items.reduce((sum, track) => sum + Number(track.durationMs || 0), 0)
+  const storeUrl = songs.items.find((track) => track.storeUrl)?.storeUrl || ''
+
+  const player = usePlayer()
+  const library = useLibrary()
+  const downloads = useDownloads()
+  const { toast } = useToast()
+
+  const playFrom = (index) => {
+    const target = list[index]
+    if (!target) return
+    if (player.current?.key === trackKey(target)) {
+      player.toggle()
+      return
+    }
+    player.playQueue(list, index)
+  }
+
+  const playAll = (shuffled = false) => {
+    const order = shuffled ? [...list].sort(() => Math.random() - 0.5) : list
+    if (!order.length) return
+    player.playQueue(order, 0)
+  }
+
+  const share = async () => {
+    const url = typeof window !== 'undefined' ? window.location.href : ''
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: name, url, text: `${name} on JIMMY STATE` })
+        return
+      }
+      await navigator.clipboard.writeText(url)
+      toast('Link copied', { title: name, type: 'ok', ttl: 2000 })
+    } catch (err) {
+      if (err?.name === 'AbortError') return
+      toast('Could not share', { message: 'Copy the address bar instead.', type: 'err' })
+    }
+  }
+
+  const download = (track) => {
+    if (!previewOf(track)) return
+    downloads.start(track)
+  }
 
   return (
-    <>
-      <div className="row gap-12" style={{ alignItems: 'center', marginBottom: 6 }}>
-        <span
-          aria-hidden="true"
-          style={{
-            width: 64,
-            height: 64,
-            flex: 'none',
-            borderRadius: '50%',
-            display: 'grid',
-            placeItems: 'center',
-            background: 'var(--grad-soft)',
-            border: '1px solid var(--line)',
-            fontSize: 24,
-            fontWeight: 800,
-          }}
-        >
-          {name.slice(0, 1).toUpperCase()}
-        </span>
-        <div style={{ minWidth: 0 }}>
-          <h1 className="truncate" style={{ marginBottom: 2 }}>
-            {name}
-          </h1>
-          <span className="tiny mute">Artist · Apple catalogue + YouTube results</span>
+    <div className="artist-page">
+      <button type="button" className="back-btn artist-back" onClick={() => navigate(-1)}>
+        <IconArrowLeft size={16} /> Back
+      </button>
+
+      {/* ------------------------------------------------------------- hero */}
+      <section className="ap-hero">
+        {heroArt ? <img className="ap-hero-img" src={heroArt} alt="" aria-hidden="true" /> : null}
+        <div className="ap-hero-veil" aria-hidden="true" />
+
+        <div className="ap-hero-body">
+          <div className="ap-avatar">
+            {heroArt ? <img src={heroArt} alt={`${name} artwork`} /> : <span>{name.slice(0, 1)}</span>}
+            <i className="ap-avatar-ring" aria-hidden="true" />
+          </div>
+
+          <div className="ap-hero-text">
+            <span className="ap-eyebrow">Artist</span>
+            <h1 className="ap-name">{name}</h1>
+            <p className="ap-meta">
+              {genres.length ? `${genres.join(' · ')} · ` : ''}
+              {plural(songs.items.length, 'song')} · {plural(releases.length, 'album')}
+            </p>
+            <p className="ap-source">
+              Catalogue: Apple Music · playback and downloads are the 30-second previews the provider publishes
+            </p>
+
+            <div className="ap-actions">
+              <button type="button" className="ap-btn ap-btn-primary" onClick={() => playAll(false)} disabled={!list.length}>
+                <IconPlay size={16} /> Play
+              </button>
+              <button type="button" className="ap-btn" onClick={() => playAll(true)} disabled={!list.length}>
+                <IconShuffle size={16} /> Shuffle
+              </button>
+              <button type="button" className="ap-btn" onClick={share}>
+                <IconShare size={16} /> Share
+              </button>
+              {storeUrl ? (
+                <a className="ap-btn" href={storeUrl} target="_blank" rel="noreferrer noopener">
+                  <IconExternal size={16} /> Apple Music
+                </a>
+              ) : null}
+            </div>
+          </div>
+
+          <aside className="ap-stats" aria-label="Artist catalogue">
+            <div>
+              <span className="ap-stat-value">{songs.items.length}</span>
+              <span className="ap-stat-label">Songs</span>
+            </div>
+            <div>
+              <span className="ap-stat-value">{releases.length}</span>
+              <span className="ap-stat-label">Albums</span>
+            </div>
+            <div>
+              <span className="ap-stat-value">{totalMs ? formatDuration(totalMs / 1000) : '—'}</span>
+              <span className="ap-stat-label">Catalogue time</span>
+            </div>
+          </aside>
         </div>
+      </section>
+
+      {/* ------------------------------------------------------------- tabs */}
+      <nav className="ap-tabs" aria-label="Artist sections">
+        {TABS.map((entry) => (
+          <button
+            key={entry.id}
+            type="button"
+            className={`ap-tab${tab === entry.id ? ' is-active' : ''}`}
+            aria-current={tab === entry.id ? 'page' : undefined}
+            onClick={() => setTab(entry.id)}
+          >
+            {entry.label}
+            {entry.id === 'songs' ? <span className="ap-tab-count">{songs.items.length}</span> : null}
+          </button>
+        ))}
+      </nav>
+
+      <div className="ap-layout">
+        <div className="ap-main">
+          {songs.loading && <Loading label="Loading this artist…" rows={5} />}
+          {!songs.loading && songs.error && <ErrorBlock error={songs.error} onRetry={load} />}
+
+          {!songs.loading && !songs.error && tab === 'overview' && (
+            <>
+              <section className="ap-section">
+                <div className="ap-section-head">
+                  <h2>Latest releases</h2>
+                  <button type="button" className="ap-link" onClick={() => setTab('albums')} disabled={!releases.length}>
+                    See all
+                  </button>
+                </div>
+                {albums.loading && <Loading label="Loading releases…" rows={2} />}
+                {!albums.loading && releases.length === 0 && (
+                  <p className="ap-note">No album entries in the catalogue for this artist.</p>
+                )}
+                {releases.length > 0 && (
+                  <div className="ap-rail">
+                    {releases.slice(0, 8).map((album) => (
+                      <button
+                        key={album.id}
+                        type="button"
+                        className="ap-release"
+                        onClick={() => {
+                          setAlbumFilter(album.title)
+                          setTab('songs')
+                        }}
+                      >
+                        <span className="ap-release-art">
+                          <Artwork src={album.artwork} alt={album.title} />
+                          <i className="ap-release-play" aria-hidden="true">
+                            <IconPlay size={14} />
+                          </i>
+                        </span>
+                        <span className="ap-release-title truncate">{album.title}</span>
+                        <span className="ap-release-sub truncate">
+                          {album.trackCount ? plural(album.trackCount, 'track') : 'Album'}
+                          {album.releaseDate ? ` · ${String(album.releaseDate).slice(0, 4)}` : ''}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              <section className="ap-section">
+                <div className="ap-section-head">
+                  <h2>Popular songs</h2>
+                  <button type="button" className="ap-link" onClick={() => setTab('songs')} disabled={!songs.items.length}>
+                    See all
+                  </button>
+                </div>
+                <SongList
+                  tracks={songs.items.slice(0, 6)}
+                  startIndex={0}
+                  onPlay={playFrom}
+                  onDownload={download}
+                  onLike={(track) => library.toggleFavourite(track)}
+                  onPlaylist={(track) => setPlaylistFor(track)}
+                  onMore={(track, index) => setSheet({ track, index })}
+                  player={player}
+                  library={library}
+                  downloads={downloads}
+                />
+              </section>
+            </>
+          )}
+
+          {!songs.loading && !songs.error && tab === 'songs' && (
+            <section className="ap-section">
+              <div className="ap-section-head">
+                <h2>
+                  Songs
+                  {albumFilter ? (
+                    <button type="button" className="ap-filter" onClick={() => setAlbumFilter('')}>
+                      {albumFilter} <IconX size={12} />
+                    </button>
+                  ) : null}
+                </h2>
+                <span className="ap-note">{list.length} of {songs.items.length}</span>
+              </div>
+              {list.length === 0 ? (
+                <EmptyState icon={<IconMusic size={22} />} title="No songs for this album" />
+              ) : (
+                <SongList
+                  tracks={list}
+                  startIndex={0}
+                  onPlay={(index) => playFrom(index)}
+                  onDownload={download}
+                  onLike={(track) => library.toggleFavourite(track)}
+                  onPlaylist={(track) => setPlaylistFor(track)}
+                  onMore={(track, index) => setSheet({ track, index })}
+                  player={player}
+                  library={library}
+                  downloads={downloads}
+                />
+              )}
+            </section>
+          )}
+
+          {!songs.loading && !songs.error && tab === 'albums' && (
+            <section className="ap-section">
+              <div className="ap-section-head">
+                <h2>Albums</h2>
+                <span className="ap-note">{releases.length}</span>
+              </div>
+              {albums.error && <ErrorBlock error={albums.error} onRetry={load} />}
+              {!albums.error && releases.length === 0 && (
+                <EmptyState icon={<IconMusic size={22} />} title="No albums in the catalogue" />
+              )}
+              <div className="ap-album-grid">
+                {releases.map((album) => (
+                  <button
+                    key={album.id}
+                    type="button"
+                    className="ap-album"
+                    onClick={() => {
+                      setAlbumFilter(album.title)
+                      setTab('songs')
+                    }}
+                  >
+                    <Artwork src={album.artwork} alt={album.title} />
+                    <span className="ap-album-title truncate">{album.title}</span>
+                    <span className="ap-album-sub truncate">
+                      {album.trackCount ? plural(album.trackCount, 'track') : 'Album'}
+                      {album.releaseDate ? ` · ${String(album.releaseDate).slice(0, 4)}` : ''}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {!songs.loading && !songs.error && tab === 'about' && (
+            <section className="ap-section">
+              <h2>About</h2>
+              <div className="ap-about-grid">
+                <div className="ap-fact">
+                  <span>Songs in catalogue</span>
+                  <b>{songs.items.length}</b>
+                </div>
+                <div className="ap-fact">
+                  <span>Albums</span>
+                  <b>{releases.length}</b>
+                </div>
+                <div className="ap-fact">
+                  <span>Total catalogue time</span>
+                  <b>{totalMs ? formatDuration(totalMs / 1000) : '—'}</b>
+                </div>
+                <div className="ap-fact">
+                  <span>Genres</span>
+                  <b>{genres.length ? genres.join(', ') : '—'}</b>
+                </div>
+              </div>
+              <p className="ap-note" style={{ marginTop: 14 }}>
+                JIMMY STATE reads Apple’s public catalogue and plays the preview clips the provider publishes. No
+                listener counts, biographies or events are invented: if the catalogue does not publish it, this page
+                does not show it.
+              </p>
+              {storeUrl ? (
+                <a className="ap-btn" href={storeUrl} target="_blank" rel="noreferrer noopener" style={{ marginTop: 12 }}>
+                  <IconExternal size={16} /> Open in Apple Music
+                </a>
+              ) : null}
+            </section>
+          )}
+        </div>
+
+        <aside className="ap-aside">
+          <div className="ap-panel">
+            <span className="ap-eyebrow">About the artist</span>
+            <p>
+              {name}
+              {genres.length ? ` — ${genres.join(', ')}` : ''}. {plural(songs.items.length, 'song')} and{' '}
+              {plural(releases.length, 'album')} are available from the catalogue on this page.
+            </p>
+            <button type="button" className="ap-btn ap-btn-ghost" onClick={() => setTab('about')}>
+              More info <IconChevron size={14} />
+            </button>
+          </div>
+
+          <div className="ap-panel">
+            <span className="ap-eyebrow">This device</span>
+            <p>
+              Likes and playlists are stored on this device. Downloads save the provider’s original file — the same
+              quality the catalogue published, never re-encoded.
+            </p>
+            <Link className="ap-btn ap-btn-ghost" to="/library">
+              Open library
+            </Link>
+          </div>
+        </aside>
       </div>
 
-      <Section title="Albums">
-        {albums.loading && <Loading label="Loading albums…" rows={2} />}
-        {!albums.loading && albums.error && (
-          <ErrorBlock error={albums.error} onRetry={loadAlbums} />
-        )}
-        {!albums.loading && !albums.error && albums.items.length === 0 && (
-          <EmptyState icon={<IconMusic size={22} />} title="No albums in the catalogue">
-            This artist has no album entries in Apple’s catalogue yet — the songs below still come from search.
-          </EmptyState>
-        )}
-        {albums.items.length > 0 && (
-          <div className="video-grid">
-            {albums.items.map((al) => (
-              <Link
-                key={al.id}
-                to={`/search?q=${encodeURIComponent(`${al.artist || name} ${al.title}`)}&mode=videos`}
-                className="video-card"
-              >
-                <Artwork src={al.artwork} alt={al.title} style={{ aspectRatio: '1/1', height: 'auto', borderRadius: 14 }} />
-                <div>
-                  <div className="video-title truncate">{al.title}</div>
-                  <div className="video-sub truncate">
-                    {al.artist || name}
-                    {al.trackCount ? ` · ${al.trackCount} track${al.trackCount === 1 ? '' : 's'}` : ''}
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </Section>
+      {sheet ? (
+        <SongSheet
+          track={sheet.track}
+          index={sheet.index}
+          onClose={() => setSheet(null)}
+          player={player}
+          onFilterAlbum={(album) => {
+            setSheet(null)
+            setAlbumFilter(album)
+            setTab('songs')
+          }}
+          toast={toast}
+        />
+      ) : null}
 
-      <Section title="Songs" action={<Link to={`/search?q=${encodeURIComponent(name)}&mode=videos`} className="section-link">Search videos <IconChevron size={13} /></Link>}>
-        {songs.loading && <Loading label="Loading songs…" rows={4} />}
-        {!songs.loading && songs.error && <ErrorBlock error={songs.error} onRetry={loadSongs} />}
-        {!songs.loading && !songs.error && songs.items.length === 0 && (
-          <EmptyState title="Nothing found for this name" />
-        )}
-        {songs.items.length > 0 && (
-          <>
-            <p className="tiny mute" style={{ marginBottom: 8 }}>
-              Full-length results for “{name}” — played from YouTube.
-            </p>
-            <div className="list">
-              {songs.items.map((t) => (
-                <TrackRow key={t.key || t.id} track={t} subtitle={`${t.artist}${t.album ? ` · ${t.album}` : ''}`} />
-              ))}
+      {playlistFor ? (
+        <PlaylistSheet track={playlistFor} onClose={() => setPlaylistFor(null)} library={library} />
+      ) : null}
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ songs */
+
+function SongList({ tracks, startIndex, onPlay, onDownload, onLike, onPlaylist, onMore, player, library, downloads }) {
+  return (
+    <div className="ap-songs">
+      {tracks.map((track, index) => {
+        const key = trackKey(track)
+        const active = player.current?.key === key
+        const playing = active && player.playing
+        const liked = library.isFavourite(track)
+        const busy = downloads.isDownloading(key)
+        const canPlay = Boolean(previewOf(track))
+        return (
+          <article key={`${key}-${index}`} className={`ap-card${active ? ' is-active' : ''}`}>
+            <div className="ap-card-art">
+              <Artwork src={track.artworkSmall || track.artwork} alt={track.title} />
+              {active && playing ? (
+                <span className="ap-card-eq" aria-hidden="true">
+                  <i />
+                  <i />
+                  <i />
+                </span>
+              ) : null}
             </div>
-          </>
-        )}
-      </Section>
-    </>
+
+            <div className="ap-card-text">
+              <span className="ap-card-title truncate">{track.title}</span>
+              <span className="ap-card-sub truncate">{track.artist}</span>
+              <span className="ap-card-album truncate">{track.album || 'Single'}</span>
+            </div>
+
+            <span className="ap-card-time">{track.durationMs ? formatDuration(track.durationMs / 1000) : '—'}</span>
+
+            <div className="ap-card-actions">
+              <button
+                type="button"
+                className="ap-icon ap-icon-play"
+                onClick={() => onPlay(startIndex + index)}
+                disabled={!canPlay}
+                aria-label={playing ? `Pause ${track.title}` : `Play ${track.title}`}
+                title={canPlay ? (playing ? 'Pause' : 'Play') : 'No preview published for this track'}
+              >
+                {playing ? <IconPause size={16} /> : <IconPlay size={16} />}
+              </button>
+
+              <button
+                type="button"
+                className="ap-icon"
+                onClick={() => onDownload(track)}
+                disabled={!canPlay || busy}
+                aria-label={`Download ${track.title}`}
+                title={canPlay ? (busy ? 'Downloading…' : 'Download') : 'No authorized file for this track'}
+              >
+                {busy ? <span className="ap-spinner" aria-hidden="true" /> : <IconDownload size={16} />}
+              </button>
+
+              <button
+                type="button"
+                className={`ap-icon${liked ? ' is-liked' : ''}`}
+                onClick={() => onLike(track)}
+                aria-pressed={liked}
+                aria-label={liked ? `Remove ${track.title} from favourites` : `Like ${track.title}`}
+                title={liked ? 'Liked' : 'Like'}
+              >
+                <IconHeart size={16} />
+              </button>
+
+              <button
+                type="button"
+                className="ap-icon"
+                onClick={() => onPlaylist(track)}
+                aria-label={`Add ${track.title} to a playlist`}
+                title="Add to playlist"
+              >
+                <IconPlus size={16} />
+              </button>
+
+              <button
+                type="button"
+                className="ap-icon"
+                onClick={() => onMore(track, startIndex + index)}
+                aria-label={`More options for ${track.title}`}
+                title="More options"
+              >
+                <IconMore size={16} />
+              </button>
+            </div>
+          </article>
+        )
+      })}
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------- song sheet */
+
+function SongSheet({ track, index, onClose, player, onFilterAlbum, toast }) {
+  const closeRef = useRef(null)
+  useEffect(() => {
+    const onKey = (event) => {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    closeRef.current?.focus()
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const copy = async () => {
+    const value = track.storeUrl || `${track.title} — ${track.artist}`
+    try {
+      await navigator.clipboard.writeText(value)
+      toast('Copied', { title: track.title, type: 'ok', ttl: 1800 })
+    } catch {
+      toast('Could not copy', { message: 'Clipboard access was refused.', type: 'err' })
+    }
+  }
+
+  return (
+    <div className="ap-sheet-wrap" role="dialog" aria-modal="true" aria-label={`Options for ${track.title}`}>
+      <button type="button" className="ap-sheet-backdrop" onClick={onClose} aria-label="Close" />
+      <div className="ap-sheet">
+        <div className="ap-sheet-head">
+          <Artwork src={track.artwork} alt="" className="ap-sheet-art" />
+          <div style={{ minWidth: 0 }}>
+            <strong className="truncate">{track.title}</strong>
+            <span className="truncate">{track.artist}</span>
+          </div>
+          <button ref={closeRef} type="button" className="ap-icon" onClick={onClose} aria-label="Close">
+            <IconX size={16} />
+          </button>
+        </div>
+
+        <div className="ap-sheet-list">
+          <button
+            type="button"
+            onClick={() => {
+              player.playNext(track)
+              onClose()
+            }}
+            disabled={!previewOf(track)}
+          >
+            <IconNext size={16} /> Play next
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              player.enqueue(track)
+              onClose()
+            }}
+            disabled={!previewOf(track)}
+          >
+            <IconQueue size={16} /> Add to queue
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              // Continue with whatever the queue actually holds from this track onward.
+              const at = player.queue.findIndex((entry) => entry.key === trackKey(track))
+              player.playQueue(at >= 0 ? player.queue.slice(at) : [track], 0)
+              onClose()
+            }}
+            disabled={!previewOf(track)}
+          >
+            <IconList size={16} /> Play from here
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (track.album) onFilterAlbum(track.album)
+              else onClose()
+            }}
+            disabled={!track.album}
+          >
+            <IconMusic size={16} /> Show album
+          </button>
+          <button type="button" onClick={copy}>
+            <IconCheck size={16} /> Copy link
+          </button>
+          {track.storeUrl ? (
+            <a href={track.storeUrl} target="_blank" rel="noreferrer noopener" onClick={onClose}>
+              <IconExternal size={16} /> Open in Apple Music
+            </a>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* --------------------------------------------------------- playlist sheet */
+
+function PlaylistSheet({ track, onClose, library }) {
+  const [name, setName] = useState('')
+  const [busy, setBusy] = useState(false)
+  const closeRef = useRef(null)
+
+  useEffect(() => {
+    const onKey = (event) => {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    closeRef.current?.focus()
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const add = async (playlistId) => {
+    setBusy(true)
+    // addToPlaylist persists and toasts on its own — no second message here.
+    await library.addToPlaylist(playlistId, track)
+    setBusy(false)
+    onClose()
+  }
+
+  const create = async (event) => {
+    event.preventDefault()
+    const value = name.trim()
+    if (!value) return
+    setBusy(true)
+    const playlist = await library.createPlaylist(value)
+    if (playlist?.id) await library.addToPlaylist(playlist.id, track)
+    setBusy(false)
+    onClose()
+  }
+
+  return (
+    <div className="ap-sheet-wrap" role="dialog" aria-modal="true" aria-label="Add to playlist">
+      <button type="button" className="ap-sheet-backdrop" onClick={onClose} aria-label="Close" />
+      <div className="ap-sheet">
+        <div className="ap-sheet-head">
+          <Artwork src={track.artwork} alt="" className="ap-sheet-art" />
+          <div style={{ minWidth: 0 }}>
+            <strong className="truncate">Add to playlist</strong>
+            <span className="truncate">{track.title}</span>
+          </div>
+          <button ref={closeRef} type="button" className="ap-icon" onClick={onClose} aria-label="Close">
+            <IconX size={16} />
+          </button>
+        </div>
+
+        <div className="ap-sheet-list">
+          {library.playlists.length === 0 && <p className="ap-note" style={{ padding: '6px 4px' }}>No playlists yet — create one below.</p>}
+          {library.playlists.map((playlist) => (
+            <button key={playlist.id} type="button" disabled={busy} onClick={() => add(playlist.id)}>
+              <IconList size={16} />
+              <span className="truncate">{playlist.name}</span>
+              <span className="ap-sheet-count">{playlist.items?.length || 0}</span>
+            </button>
+          ))}
+        </div>
+
+        <form className="ap-sheet-form" onSubmit={create}>
+          <input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="New playlist name"
+            aria-label="New playlist name"
+            maxLength={60}
+          />
+          <button type="submit" className="ap-btn ap-btn-primary" disabled={!name.trim() || busy}>
+            Create
+          </button>
+        </form>
+      </div>
+    </div>
   )
 }
