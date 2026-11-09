@@ -528,7 +528,7 @@ function FeedCard({
   const liked = library.isFavourite(track)
   const subscribed = library.isSubscribed?.(track.artistId)
   const busy = downloads.isDownloading(key)
-  const canPlay = Boolean(track.previewUrl)
+  const canPlay = Boolean(track.previewUrl || track.hlsUrl)
   const plays = library.playCountFor?.(track) || 0
 
   return (
@@ -557,18 +557,6 @@ function FeedCard({
             <h3 className="feed-title" title={track.title}>
               {track.title}
             </h3>
-            <div className="feed-meta">
-              <button type="button" className="feed-artist truncate" onClick={onArtist}>
-                {track.artist}
-              </button>
-              {track.full ? <span className="feed-badge">FULL</span> : null}
-              <span aria-hidden="true">·</span>
-              <time dateTime={track.releaseDate} title={track.releaseDate || ''}>
-                {releaseLabel(track.releaseDate)}
-              </time>
-              <span aria-hidden="true">·</span>
-              <span title="Plays recorded on this device">{plays} plays</span>
-            </div>
           </div>
 
           {track.artistId ? (
@@ -581,6 +569,19 @@ function FeedCard({
               {subscribed ? 'Subscribed' : 'Subscribe'}
             </button>
           ) : null}
+        </div>
+
+        <div className="feed-meta">
+          <button type="button" className="feed-artist" onClick={onArtist}>
+            {track.artist}
+          </button>
+          {track.full ? <span className="feed-badge">FULL</span> : null}
+          <span aria-hidden="true">·</span>
+          <time dateTime={track.releaseDate} title={track.releaseDate || ''}>
+            {releaseLabel(track.releaseDate)}
+          </time>
+          <span aria-hidden="true">·</span>
+          <span title="Plays recorded on this device">{plays} plays</span>
         </div>
 
         <div className="feed-actions">
