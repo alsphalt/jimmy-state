@@ -2520,8 +2520,32 @@ body.drawer-open {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.feed-meta { display: flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 11px; color: var(--ap-dim); min-width: 0; }
-.feed-artist { border: 0; padding: 0; background: none; color: var(--ap-lav); font: inherit; font-weight: 650; cursor: pointer; max-width: 46%; }
+.feed-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--ap-dim);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.feed-meta > * { flex: none; }
+.feed-artist {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--ap-lav);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .feed-artist:hover { text-decoration: underline; }
 
 .feed-sub {

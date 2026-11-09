@@ -5,6 +5,7 @@ import { IconMusic, IconPlay, IconSearch, IconX } from './Icons.jsx'
 import { usePlayer } from '../context/PlayerContext.jsx'
 import { useToast } from '../context/LibraryContext.jsx'
 import { api } from '../lib/api.js'
+import { hasFullTracks } from '../lib/providers.js'
 import { formatDuration } from '../lib/format.js'
 
 const EMPTY = { q: '', artists: [], albums: [], songs: [], loading: false }
@@ -49,21 +50,29 @@ export default function SmartSearch({
       requested.current = q
       setGroups((g) => ({ ...g, loading: true }))
       try {
-        // Full-length provider tracks are searched alongside the catalogue; when the
-        // provider is not configured this simply comes back empty.
-        const [data, full] = await Promise.all([
-          api.suggest(q),
-          api.epidemicSearch(q, 3).catch(() => ({ items: [] })),
-        ])
+        // The catalogue answers first so the panel never waits on the optional
+        // provider; full-length results are spliced in when they arrive.
+        const data = await api.suggest(q)
         // Ignore a response that arrived after the term moved on.
         if (requested.current !== q) return
         setGroups({
           q,
           artists: data.artists || [],
           albums: data.albums || [],
-          songs: [...(full.items || []), ...(data.songs || [])],
+          songs: data.songs || [],
           loading: false,
         })
+        hasFullTracks()
+          .then((on) => (on ? api.epidemicSearch(q, 3) : null))
+          .then((full) => {
+            const extra = full?.items || []
+            if (!extra.length || requested.current !== q) return
+            setGroups((g) => ({
+              ...g,
+              songs: [...extra, ...g.songs.filter((row) => !String(row.id || '').startsWith('es:'))],
+            }))
+          })
+          .catch(() => {})
         setOpen(true)
         setActive(-1)
       } catch {

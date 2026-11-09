@@ -16,6 +16,7 @@ import {
   IconSearch,
 } from '../components/Icons.jsx'
 import { api } from '../lib/api.js'
+import { providerStatus } from '../lib/providers.js'
 import { useLibrary, useToast } from '../context/LibraryContext.jsx'
 import { usePlayer } from '../context/PlayerContext.jsx'
 import { useDownloads } from '../context/DownloadsContext.jsx'
@@ -73,10 +74,9 @@ export default function Home() {
   // configured — otherwise the rail is absent rather than empty.
   useEffect(() => {
     let alive = true
-    api
-      .providers()
-      .then((data) => {
-        if (!alive || !data?.providers?.epidemic?.configured) return null
+    providerStatus()
+      .then((providers) => {
+        if (!alive || !providers?.epidemic?.configured) return null
         return api.epidemicFeatured(10).then((res) => {
           if (alive) setFullTracks(res.items || [])
         })
