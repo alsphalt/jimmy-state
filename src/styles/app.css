@@ -1750,15 +1750,17 @@ body.drawer-open {
   box-shadow: 0 30px 70px -40px rgba(131, 0, 255, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
-.ap-hero-img {
+/* A blurred <img> over a full hero is the single most expensive effect here, and on
+   older Android WebViews a large `filter: blur()` can fail to composite and paint the
+   whole viewport black. The same look is achieved with the artwork as a dimmed wash:
+   no filter, no extra GPU layer. */
+.ap-hero-wash {
   position: absolute;
-  inset: -40px;
-  width: calc(100% + 80px);
-  height: calc(100% + 80px);
-  object-fit: cover;
-  filter: blur(26px) saturate(140%) brightness(0.55);
-  opacity: 0.7;
-  transform: scale(1.1);
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.14;
+  transform: none;
 }
 
 .ap-hero-veil {
@@ -2198,12 +2200,18 @@ body.drawer-open {
 }
 
 @media (max-width: 720px) {
-  .ap-hero-body { grid-template-columns: 84px minmax(0, 1fr); gap: 14px; padding: 18px 14px 16px; align-items: center; }
-  .ap-avatar { width: 84px; height: 84px; font-size: 28px; }
-  .ap-stats { grid-column: 1 / -1; grid-auto-flow: column; grid-auto-columns: 1fr; text-align: center; }
+  .ap-hero-body { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 16px 14px 14px; align-items: start; }
+  .ap-avatar { width: 72px; height: 72px; font-size: 24px; }
+  .ap-hero-text { width: 100%; }
+  .ap-name { font-size: 23px; margin: 4px 0 5px; }
+  .ap-meta { font-size: 12px; }
+  .ap-source { font-size: 10.5px; }
+  .ap-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .ap-actions .ap-btn { justify-content: center; padding: 0 10px; }
+  .ap-stats { grid-auto-flow: column; grid-auto-columns: 1fr; text-align: center; }
   .ap-stats > div { align-items: center; }
   .ap-stat-value { font-size: 15px; }
-  .ap-name { font-size: 24px; }
+  .ap-stat-label { font-size: 9.5px; }
   .ap-section { padding: 12px; border-radius: 16px; }
 
   .ap-card { grid-template-columns: 48px minmax(0, 1fr) auto; grid-template-areas: 'art text time' 'art actions actions'; row-gap: 6px; }
@@ -2348,7 +2356,7 @@ body.drawer-open {
 .home-rail-track {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(118px, 1fr);
+  grid-auto-columns: 132px;
   gap: 10px;
   overflow-x: auto;
   padding-bottom: 6px;
@@ -2361,6 +2369,7 @@ body.drawer-open {
   flex-direction: column;
   gap: 4px;
   min-width: 0;
+  overflow: hidden;
   padding: 8px;
   border-radius: 14px;
   border: 1px solid var(--ap-line);
@@ -2385,8 +2394,8 @@ body.drawer-open {
 .rail-avatar { display: grid; place-items: center; aspect-ratio: 1/1; border-radius: 50%; overflow: hidden; background: linear-gradient(160deg, var(--ap-deep), #0a0616); font-size: 22px; font-weight: 800; }
 .rail-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
-.rail-title { font-size: 11.5px; font-weight: 650; color: var(--ap-white); }
-.rail-sub { font-size: 10.5px; color: var(--ap-dim); }
+.rail-title { display: block; font-size: 11.5px; font-weight: 650; color: var(--ap-white); min-width: 0; }
+.rail-sub { display: block; font-size: 10.5px; color: var(--ap-dim); min-width: 0; }
 
 /* --------------------------------------------------------------------- feed */
 .feed-section { margin-top: 4px; }
@@ -2440,7 +2449,17 @@ body.drawer-open {
 .feed-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
 .feed-info { min-width: 0; flex: 1; }
-.feed-title { margin: 0; font-size: 14px; font-weight: 700; color: var(--ap-white); line-height: 1.25; }
+.feed-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ap-white);
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 .feed-meta { display: flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 11px; color: var(--ap-dim); min-width: 0; }
 .feed-artist { border: 0; padding: 0; background: none; color: var(--ap-lav); font: inherit; font-weight: 650; cursor: pointer; max-width: 46%; }
 .feed-artist:hover { text-decoration: underline; }
@@ -2581,4 +2600,32 @@ body.drawer-open {
 @media (prefers-reduced-motion: reduce) {
   .feed-card, .rail-tile, .feed-thumb img { transition: none; }
   .notif-panel { animation: none; }
+}
+
+/* ------------------------------------------------------------- error screen */
+.error-screen {
+  margin: 22px auto;
+  max-width: 520px;
+  padding: 22px;
+  border-radius: 20px;
+  border: 1px solid rgba(199, 125, 255, 0.24);
+  background: linear-gradient(160deg, rgba(25, 13, 50, 0.85), rgba(8, 6, 17, 0.92));
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 30px 70px -40px rgba(131, 0, 255, 0.7);
+}
+
+.error-screen h1 { margin: 6px 0 8px; font-size: 19px; }
+.error-screen p { margin: 0 0 12px; font-size: 12.5px; line-height: 1.55; color: var(--text-dim); }
+
+.error-detail {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(199, 125, 255, 0.18);
+  background: rgba(0, 0, 0, 0.35);
+  color: #ffb4c8;
+  font: 11.5px/1.5 ui-monospace, Menlo, Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
 }

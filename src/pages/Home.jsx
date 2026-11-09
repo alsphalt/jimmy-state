@@ -494,7 +494,7 @@ function FeedCard({
           </button>
 
           <div className="feed-info">
-            <h3 className="feed-title truncate" title={track.title}>
+            <h3 className="feed-title" title={track.title}>
               {track.title}
             </h3>
             <div className="feed-meta">

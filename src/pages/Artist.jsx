@@ -111,6 +111,34 @@ export default function Artist() {
   const downloads = useDownloads()
   const { toast } = useToast()
 
+  // A route with no usable artist id is a dead end, not a blank hero. This is what a
+  // link built from a video channel (no artistId) used to produce.
+  if (!artistId && !songs.loading) {
+    return (
+      <div className="artist-page">
+        <button type="button" className="back-btn artist-back" onClick={() => navigate(-1)}>
+          <IconArrowLeft size={16} /> Back
+        </button>
+        <section className="ap-section" style={{ marginTop: 12 }}>
+          <span className="ap-eyebrow">Artist</span>
+          <h1 className="ap-name" style={{ marginTop: 6 }}>{name}</h1>
+          <p className="ap-note" style={{ marginTop: 6 }}>
+            The catalogue has no artist id for this name, so there is no discography to open. Search it instead — the
+            results are real catalogue songs.
+          </p>
+          <div className="ap-actions" style={{ marginTop: 14 }}>
+            <Link className="ap-btn ap-btn-primary" to={`/search?q=${encodeURIComponent(name)}&mode=artists`}>
+              Search artists
+            </Link>
+            <Link className="ap-btn" to="/discover">
+              Discover
+            </Link>
+          </div>
+        </section>
+      </div>
+    )
+  }
+
   const playFrom = (index) => {
     const target = list[index]
     if (!target) return
@@ -155,7 +183,13 @@ export default function Artist() {
 
       {/* ------------------------------------------------------------- hero */}
       <section className="ap-hero">
-        {heroArt ? <img className="ap-hero-img" src={heroArt} alt="" aria-hidden="true" /> : null}
+        {heroArt ? (
+          <div
+            className="ap-hero-wash"
+            aria-hidden="true"
+            style={{ backgroundImage: `url("${heroArt}")` }}
+          />
+        ) : null}
         <div className="ap-hero-veil" aria-hidden="true" />
 
         <div className="ap-hero-body">

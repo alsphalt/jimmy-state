@@ -1,7 +1,8 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { BottomNav, InstallBanner, PlayerBar, TopBar, UpdateBar } from './components/Chrome.jsx'
 import Intro from './components/Intro.jsx'
 import { ReleaseWatcher } from './components/Notifications.jsx'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
 import NeonBackground from './components/NeonBackground.jsx'
 import { OfflineNote, Toasts } from './components/ui.jsx'
 import { usePlayer } from './context/PlayerContext.jsx'
@@ -40,6 +41,7 @@ function Page({ children, className = '' }) {
 }
 
 export default function App() {
+  const location = useLocation()
   return (
     <>
       {/* Outside <Routes>: the animation keeps running across navigation. */}
@@ -51,6 +53,9 @@ export default function App() {
       <InstallBanner />
       <UpdateBar />
       <main className="shell grow" style={{ width: '100%' }}>
+        {/* Keyed by path so a failed page does not keep the error screen after a
+            navigation — the boundary resets on every route change. */}
+        <ErrorBoundary key={location.pathname}>
         <Routes>
           <Route path="/" element={<Page><Home /></Page>} />
           <Route path="/discover" element={<Page><Discover /></Page>} />
@@ -76,6 +81,7 @@ export default function App() {
           <Route path="/tools/system" element={<Page><System /></Page>} />
           <Route path="*" element={<Page><NotFound /></Page>} />
         </Routes>
+        </ErrorBoundary>
       </main>
         <PlayerBar />
         <BottomNav />
