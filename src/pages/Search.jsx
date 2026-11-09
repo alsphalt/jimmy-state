@@ -8,11 +8,13 @@ import { IconChevron, IconDownload, IconPlay, IconSearch, IconTrash, IconX } fro
 import { parseVideoId } from '../components/YouTubePlayer.jsx'
 import { api } from '../lib/api.js'
 import { useLibrary } from '../context/LibraryContext.jsx'
+import { useDownloads } from '../context/DownloadsContext.jsx'
 import { timeAgo } from '../lib/format.js'
 
 // No Music tab: every song result is a full-length YouTube item now, so a separate
 // catalogue list would only offer the same track as a 30-second preview.
 const MODES = [
+  { value: 'songs', label: 'Songs' },
   { value: 'videos', label: 'Videos' },
   { value: 'artists', label: 'Artists' },
   { value: 'albums', label: 'Albums' },
@@ -39,6 +41,7 @@ export default function Search() {
     source: '',
   })
   const { addSearch, searches, clearSearches, downloads, favourites, videos, identifications } = useLibrary()
+  const { start: startDownload } = useDownloads()
 
   const run = async (query, nextMode = mode) => {
     const q = String(query || '').trim()
@@ -47,7 +50,11 @@ export default function Search() {
     try {
       let items = []
       let meta = { configured: true, fallback: false, notice: '' }
-      if (nextMode === 'videos') {
+      if (nextMode === 'songs') {
+        const data = await api.searchMusic(q, 24)
+        items = data.items || []
+        meta = { configured: true, fallback: false, notice: '', source: 'itunes' }
+      } else if (nextMode === 'videos') {
         const data = await api.searchVideos(q, 24)
         items = data.items || []
         meta = {
@@ -257,6 +264,17 @@ export default function Search() {
         </div>
       )}
 
+      {state.items.length > 0 && mode === 'songs' && (
+        <>
+          <p className="tiny muted" style={{ marginTop: 16 }}>
+            Search results include provider-published preview clips. Each song can be played and saved as an authorized audio file when a preview is available.
+          </p>
+          <div className="list" style={{ marginTop: 10 }}>
+            {state.items.map((track) => <TrackRow key={track.id || track.key} track={track} />)}
+          </div>
+        </>
+      )}
+
       {state.items.length > 0 && mode === 'videos' && (
         <>
           {state.fallback && (
@@ -295,7 +313,13 @@ export default function Search() {
           )}
           <div className="video-grid" style={{ marginTop: 14 }}>
             {state.items.map((v) => (
-              <VideoCard key={v.videoId} video={v} />
+              <VideoCard
+                key={v.videoId}
+                video={v}
+                onDownload={(item) =>
+                  startDownload(item, { kind: 'video', fileName: `${item.title || 'jimmy-state-video'}.mp4` })
+                }
+              />
             ))}
           </div>
         </>

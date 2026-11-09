@@ -28,6 +28,7 @@ export default function Discover() {
   const { t } = useTranslation()
   const [tab, setTab] = useState('top')
   const [charts, setCharts] = useState({ loading: true, items: [], error: null })
+  const [country, setCountry] = useState('ke')
   const [genre, setGenre] = useState('')
   const [genreResults, setGenreResults] = useState({ loading: false, items: [], error: null })
   const [artistTerm, setArtistTerm] = useState('')
@@ -37,12 +38,12 @@ export default function Discover() {
   const loadCharts = () => {
     setCharts({ loading: true, items: [], error: null })
     api
-      .charts(25)
+      .charts(25, country)
       .then((d) => setCharts({ loading: false, items: d.items || [], error: null }))
       .catch((e) => setCharts({ loading: false, items: [], error: e.message }))
   }
 
-  useEffect(loadCharts, [])
+  useEffect(loadCharts, [country])
 
   const pickGenre = async (name) => {
     setGenre(name)
@@ -93,6 +94,18 @@ export default function Discover() {
 
       {tab === 'top' && (
         <section className="section" style={{ marginTop: 16 }}>
+          <div className="row wrap gap-8" style={{ marginBottom: 12 }}>
+            <span className="tiny mute">Latest regional chart</span>
+            <select className="input-plain" value={country} onChange={(event) => setCountry(event.target.value)} aria-label="Chart country">
+              <option value="ke">Kenya</option>
+              <option value="tz">Tanzania</option>
+              <option value="ug">Uganda</option>
+              <option value="za">South Africa</option>
+              <option value="ng">Nigeria</option>
+              <option value="gh">Ghana</option>
+              <option value="us">Global</option>
+            </select>
+          </div>
           {charts.loading && <Loading label="Loading the chart…" rows={5} />}
           {charts.error && <ErrorBlock error={charts.error} onRetry={loadCharts} />}
           {!charts.loading && !charts.error && charts.items.length === 0 && (
@@ -106,7 +119,7 @@ export default function Discover() {
                 ))}
               </div>
               <p className="tiny mute" style={{ marginTop: 12 }}>
-                Source: Apple Music most-played feed · updated {formatDate(new Date().toISOString())}
+                Source: Apple Music most-played feed for {country.toUpperCase()} · updated {formatDate(new Date().toISOString())}
               </p>
             </>
           )}
@@ -218,9 +231,9 @@ export default function Discover() {
       <div className="card card-pad" style={{ marginTop: 26 }}>
         <span className="eyebrow">{t('discover.howItWorks')}</span>
         <p className="tiny muted" style={{ marginTop: 6 }}>
-          Charts come from Apple’s public marketing feed; artwork and preview clips come from the iTunes Search
-          API. Both are queried by this app’s server, so no keys reach your browser. Preview clips are the only audio
-          available for download.
+          Charts are fetched by country from Apple’s public feed, including Kenya, Tanzania and other African
+          markets. Artwork and provider-published preview clips come from the iTunes Search API. Preview clips are
+          the only catalogue audio available for authorized download.
         </p>
       </div>
     </>

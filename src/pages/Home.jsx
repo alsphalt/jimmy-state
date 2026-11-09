@@ -98,7 +98,7 @@ export default function Home() {
   useEffect(() => {
     let alive = true
     api
-      .charts(14)
+      .charts(14, 'ke')
       .then((data) => alive && setCharts({ loading: false, items: data.items || [], error: null }))
       .catch((err) => alive && setCharts({ loading: false, items: [], error: err.message }))
     return () => {
