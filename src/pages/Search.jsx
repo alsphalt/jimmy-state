@@ -59,14 +59,25 @@ export default function Search() {
       }
       else if (nextMode === 'artists') items = (await api.artists(q)).items || []
       else if (nextMode === 'albums') {
-        const tracks = (await api.searchMusic(q, 40)).items || []
+        // /api/music/search now returns YouTube items, and a YouTube item has no album
+        // field — so deriving albums from it always produced an empty list. Albums come
+        // from the catalogue instead: match an artist, then ask for that artist's albums.
+        const artists = (await api.artists(q)).items || []
+        const picked = artists.slice(0, 3)
+        const lists = await Promise.all(
+          picked.map((a) => api.albums(a.artistId).catch(() => ({ items: [] }))),
+        )
         const seen = new Map()
-        for (const t of tracks) {
-          if (!t.album) continue
-          const key = `${t.album}::${t.artist}`
-          if (!seen.has(key)) seen.set(key, { id: key, title: t.album, artist: t.artist, artwork: t.artwork, releaseDate: t.releaseDate, trackCount: 0 })
-          seen.get(key).trackCount += 1
-        }
+        lists.forEach((list, index) => {
+          for (const al of list.items || []) {
+            if (!al.collectionId || seen.has(al.collectionId)) continue
+            seen.set(al.collectionId, {
+              ...al,
+              id: al.id || `album:${al.collectionId}`,
+              artist: al.artist || picked[index]?.name || q,
+            })
+          }
+        })
         items = [...seen.values()]
       }
       setState({ loading: false, error: null, items, ran: true, ...meta })
@@ -293,7 +304,7 @@ export default function Search() {
       {state.items.length > 0 && mode === 'artists' && (
         <div className="list" style={{ marginTop: 18 }}>
           {state.items.map((a) => (
-            <Link key={a.id} to={`/search?q=${encodeURIComponent(a.name)}&mode=videos`} className="list-row">
+            <Link key={a.id} to={`/artist/${a.artistId}?name=${encodeURIComponent(a.name)}`} className="list-row">
               <span className="dl-icon" style={{ borderRadius: '50%' }}>
                 {a.name.slice(0, 1)}
               </span>

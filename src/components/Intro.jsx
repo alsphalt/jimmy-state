@@ -4,9 +4,13 @@ import NeonBackground from './NeonBackground.jsx'
 /**
  * DARKNOTE EVOLUTION startup intro.
  *
- * 0–5 s   neon background only
- * 5–7.7 s DARKNOTE EVOLUTION / JIMMY TECH fade in over the same running animation
- * ~8.3 s  overlay fades away, revealing the app that was already mounted underneath
+ * 0–1.5 s   neon background only
+ * 1.5–3.4 s  DARKNOTE EVOLUTION / JIMMY TECH fade in over the same animation
+ * 3.4–4.0 s  overlay fades away, revealing the app already mounted underneath
+ *
+ * Four seconds end to end, on purpose: the intro is a first-paint cover for the
+ * bundle, not a destination. Anything longer is time a returning user pays every
+ * cold launch, and the timings below are the only place that length is defined.
  *
  * Once per app open: the flag lives in sessionStorage, so internal navigation never
  * replays it, while a fresh launch (new tab, or the PWA reopened after being killed)
@@ -42,12 +46,12 @@ export default function Intro() {
     }
 
     setPhase('bg')
-    const toBrand = window.setTimeout(() => setPhase('brand'), 5000)
-    const toOut = window.setTimeout(() => setPhase('out'), 7700)
+    const toBrand = window.setTimeout(() => setPhase('brand'), 1500)
+    const toOut = window.setTimeout(() => setPhase('out'), 3400)
     const toDone = window.setTimeout(() => {
       mark()
       setPhase('done')
-    }, 8300)
+    }, 4000)
 
     return () => {
       window.clearTimeout(toBrand)

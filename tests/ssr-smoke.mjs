@@ -30,6 +30,8 @@ const ROUTES = [
   '/search',
   '/search?q=amapiano&mode=videos',
   '/song/test%3A%3Aartist',
+  '/artist/79371544?name=Vybz%20Kartel',
+  '/artist/%20?name=Unknown',
   '/settings',
   '/services',
   '/privacy',

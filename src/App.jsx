@@ -15,6 +15,7 @@ import Library from './pages/Library.jsx'
 import Downloads from './pages/Downloads.jsx'
 import Search from './pages/Search.jsx'
 import SongDetails from './pages/SongDetails.jsx'
+import Artist from './pages/Artist.jsx'
 import Settings from './pages/Settings.jsx'
 import Language from './pages/Language.jsx'
 import Services from './pages/Services.jsx'
@@ -63,6 +64,7 @@ export default function App() {
           <Route path="/downloads" element={<Page><Downloads /></Page>} />
           <Route path="/search" element={<Page><Search /></Page>} />
           <Route path="/song/:key" element={<Page><SongDetails /></Page>} />
+          <Route path="/artist/:id" element={<Page><Artist /></Page>} />
           <Route path="/settings" element={<Page><Settings /></Page>} />
           <Route path="/settings/language" element={<Page><Language /></Page>} />
           <Route path="/services" element={<Page><Services /></Page>} />

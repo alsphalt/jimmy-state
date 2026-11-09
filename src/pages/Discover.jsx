@@ -55,9 +55,8 @@ export default function Discover() {
     }
   }
 
-  const searchArtists = async (event) => {
-    event.preventDefault()
-    const q = artistTerm.trim()
+  const runArtistSearch = async (query) => {
+    const q = String(query || '').trim()
     if (!q) return
     setArtists({ loading: true, items: [], error: null, done: false })
     try {
@@ -66,6 +65,12 @@ export default function Discover() {
     } catch (err) {
       setArtists({ loading: false, items: [], error: err.message, done: true })
     }
+  }
+
+  // A form handler needs the event; ErrorBlock's retry button calls back with none.
+  const submitArtists = (event) => {
+    event.preventDefault()
+    runArtistSearch(artistTerm)
   }
 
   return (
@@ -144,7 +149,7 @@ export default function Discover() {
 
       {tab === 'artists' && (
         <section className="section" style={{ marginTop: 16 }}>
-          <form onSubmit={searchArtists} role="search">
+          <form onSubmit={submitArtists} role="search">
             <label className="field">
               <IconSearch size={18} className="field-icon" />
               <input
@@ -162,7 +167,7 @@ export default function Discover() {
 
           <div style={{ marginTop: 16 }}>
             {artists.loading && <Loading label="Searching artists…" rows={3} />}
-            {artists.error && <ErrorBlock error={artists.error} onRetry={searchArtists} />}
+            {artists.error && <ErrorBlock error={artists.error} onRetry={() => runArtistSearch(artistTerm)} />}
             {!artists.loading && !artists.error && artists.done && artists.items.length === 0 && (
               <EmptyState title={t('discover.noArtists')} />
             )}
@@ -174,7 +179,7 @@ export default function Discover() {
                     type="button"
                     className="list-row"
                     style={{ textAlign: 'left', width: '100%' }}
-                    onClick={() => navigate(`/search?q=${encodeURIComponent(a.name)}&mode=videos`)}
+                    onClick={() => navigate(`/artist/${a.artistId}?name=${encodeURIComponent(a.name)}`)}
                   >
                     <span
                       style={{

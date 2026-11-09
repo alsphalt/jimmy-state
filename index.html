@@ -22,10 +22,39 @@
     <link rel="preconnect" href="https://www.youtube.com" />
     <link rel="preconnect" href="https://i.ytimg.com" />
     <link rel="dns-prefetch" href="https://www.youtube-nocookie.com" />
+    <!-- First paint: static boot mark inside #root. React replaces this subtree on
+         mount, so it disappears exactly when the app is ready and needs no script
+         (the CSP is script-src 'self'). Inline styles are allowed by style-src. -->
+    <style>
+      html, body { margin: 0; background: #05060a; }
+      html[data-theme="light"], html[data-theme="light"] body { background: #f4f5fa; }
+      .js-boot {
+        position: fixed; inset: 0; display: grid; place-items: center; gap: 14px;
+        align-content: center; background: inherit; color: #e7ebf2;
+        font: 600 13px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        letter-spacing: .34em; text-indent: .34em;
+      }
+      html[data-theme="light"] .js-boot { color: #121826; }
+      .js-boot-mark { font: 800 20px/1 system-ui, sans-serif; letter-spacing: .16em; text-indent: .16em; }
+      .js-boot-bar { width: 96px; height: 3px; border-radius: 99px; overflow: hidden; background: rgba(255,255,255,.12); }
+      html[data-theme="light"] .js-boot-bar { background: rgba(0,0,0,.1); }
+      .js-boot-bar i {
+        display: block; width: 40%; height: 100%; border-radius: 99px;
+        background: linear-gradient(90deg, #60a5fa, #a78bfa, #22d3ee);
+        animation: js-boot 1.1s ease-in-out infinite;
+      }
+      @keyframes js-boot { 0% { transform: translateX(-110%); } 100% { transform: translateX(280%); } }
+      @media (prefers-reduced-motion: reduce) { .js-boot-bar i { animation: none; width: 100%; } }
+    </style>
     <title>JIMMY STATE — Identify Any Song</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="js-boot" role="status" aria-live="polite">
+        <span class="js-boot-mark">JIMMY STATE</span>
+        <span class="js-boot-bar"><i></i></span>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
