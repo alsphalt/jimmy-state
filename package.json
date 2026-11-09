@@ -3,7 +3,7 @@
   "version": "1.1.0",
   "private": true,
   "type": "module",
-  "description": "JIMMY STATE \u2014 music recognition, discovery, video streaming and authorized downloads.",
+  "description": "JIMMY STATE — music recognition, discovery, video streaming and authorized downloads.",
   "scripts": {
     "dev": "concurrently -n api,web -c magenta,cyan \"node server/index.js\" \"vite\"",
     "dev:api": "node server/index.js",
@@ -39,6 +39,7 @@
     "@capacitor/status-bar": "7.0.6",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "hls.js": "^1.5.17",
     "i18next": "^23.16.8",
     "pg": "^8.23.1",
     "react": "^18.3.1",

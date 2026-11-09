@@ -49,14 +49,19 @@ export default function SmartSearch({
       requested.current = q
       setGroups((g) => ({ ...g, loading: true }))
       try {
-        const data = await api.suggest(q)
+        // Full-length provider tracks are searched alongside the catalogue; when the
+        // provider is not configured this simply comes back empty.
+        const [data, full] = await Promise.all([
+          api.suggest(q),
+          api.epidemicSearch(q, 3).catch(() => ({ items: [] })),
+        ])
         // Ignore a response that arrived after the term moved on.
         if (requested.current !== q) return
         setGroups({
           q,
           artists: data.artists || [],
           albums: data.albums || [],
-          songs: data.songs || [],
+          songs: [...(full.items || []), ...(data.songs || [])],
           loading: false,
         })
         setOpen(true)

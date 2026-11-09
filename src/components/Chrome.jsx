@@ -402,16 +402,18 @@ export function PlayerBar() {
         <button type="button" className="player-meta" onClick={toggle} style={{ textAlign: 'left', background: 'none' }}>
           <strong className="truncate">{current.title}</strong>
           <span className="truncate">{error || current.artist}</span>
-          <span
-            className="player-preview-tag"
-            title={
-              isPreview
-                ? `${formatClock(duration)} preview of a ${formatClock(trackLength)} track`
-                : t('player.preview')
-            }
-          >
-            {isPreview ? `Preview · ${formatClock(duration)}` : t('player.preview')}
-          </span>
+          {isPreview ? (
+            <span
+              className="player-preview-tag"
+              title={`${formatClock(duration)} preview of a ${formatClock(trackLength)} track`}
+            >
+              Preview · {formatClock(duration)}
+            </span>
+          ) : current.full ? (
+            <span className="player-preview-tag is-full" title="Full-length licensed track">
+              Full track
+            </span>
+          ) : null}
         </button>
 
         <div className="player-transport">

@@ -19,6 +19,13 @@ import {
   searchMusicVideos,
   lookupMusicVideo,
 } from './lib/itunes.js'
+import {
+  epidemicConfigured,
+  search as epidemicSearch,
+  featured as epidemicFeatured,
+  streamUrl as epidemicStreamUrl,
+  downloadUrl as epidemicDownloadUrl,
+} from './lib/epidemic.js'
 import { lookupMetadata, metadataConfigured } from './lib/acrMetadata.js'
 import { feedPage } from './lib/feed.js'
 import { searchVideos, relatedVideos, getVideo, youtubeConfigured, oembed } from './lib/youtube.js'
@@ -509,6 +516,62 @@ app.get('/api/music/artist', softLimit, async (req, res, next) => {
   } catch (err) {
     next(err)
   }
+})
+
+// ------------------------------------------------------------------ Epidemic Sound
+// Full-length, licensed tracks. Playback is HLS, saving is an MP3 from the provider's
+// metered download endpoint — nothing is extracted, both URLs are the provider's own.
+//
+// One route with an action parameter: Vercel functions support a single dynamic path
+// level, so /api/music/epidemic/<something> would not deploy.
+app.get('/api/music/epidemic', softLimit, async (req, res, next) => {
+  const action = String(req.query.action || 'search')
+  try {
+    if (action === 'stream') {
+      const url = await epidemicStreamUrl(String(req.query.id || ''))
+      res.set('Cache-Control', 'no-store')
+      return res.json({ ok: true, url })
+    }
+    if (action === 'file') {
+      const { url } = await epidemicDownloadUrl(String(req.query.id || ''), req.query.quality)
+      const name = sanitiseFileName(
+        typeof req.query.name === 'string' && req.query.name ? req.query.name : 'epidemic-sound-track',
+        'audio/mpeg',
+      )
+      const upstream = await fetch(url, { signal: AbortSignal.timeout(120000) })
+      if (!upstream.ok || !upstream.body) {
+        return res.status(502).json({ ok: false, code: 'UPSTREAM_ERROR', error: 'The provider refused the file.' })
+      }
+      const length = Number(upstream.headers.get('content-length') || 0)
+      if (length > MAX_DOWNLOAD_BYTES) {
+        await upstream.body.cancel().catch(() => {})
+        return res.status(413).json({ ok: false, code: 'TOO_LARGE', error: 'That file is above the download limit.' })
+      }
+      res.set('Content-Type', 'audio/mpeg')
+      if (length) res.set('Content-Length', String(length))
+      res.set('Content-Disposition', `attachment; filename="${name}"`)
+      Readable.fromWeb(upstream.body).pipe(res)
+      return undefined
+    }
+    if (action === 'featured') {
+      const items = await epidemicFeatured(req.query.limit || 12)
+      return res.json({ ok: true, count: items.length, items })
+    }
+    const items = await epidemicSearch(String(req.query.q || '').slice(0, 200), req.query.limit || 12)
+    return res.json({ ok: true, query: req.query.q || '', count: items.length, items })
+  } catch (err) {
+    return next(err)
+  }
+})
+
+app.get('/api/providers', softLimit, (req, res) => {
+  res.json({
+    ok: true,
+    providers: {
+      epidemic: { configured: epidemicConfigured(), fullLength: true },
+      catalogue: { configured: true, fullLength: false, note: '30-second licensed previews' },
+    },
+  })
 })
 
 app.get('/api/music/charts', softLimit, async (req, res, next) => {

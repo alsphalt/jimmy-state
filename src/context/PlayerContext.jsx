@@ -21,6 +21,7 @@ const REPEAT = ['off', 'all', 'one']
 
 export function PlayerProvider({ children }) {
   const audioRef = useRef(null)
+  const hlsRef = useRef(null)
   const [current, setCurrent] = useState(null)
   const [playing, setPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -58,10 +59,44 @@ export function PlayerProvider({ children }) {
       indexRef.current = position
       setIndex(position)
       audio.pause()
-      // Mixed content would be blocked outright on the https deployment.
-      audio.src = String(entry.previewUrl).replace(/^http:\/\//i, 'https://')
+      if (hlsRef.current) {
+        hlsRef.current.destroy()
+        hlsRef.current = null
+      }
+      if (entry.hlsUrl) {
+        // Full-length provider track: fetch the signed manifest, then feed it to HLS.
+        const res = await fetch(entry.hlsUrl)
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok || !data.url) {
+          throw new Error(data.error || 'The full track could not be loaded.')
+        }
+        const { default: Hls } = await import('hls.js')
+        if (Hls.isSupported()) {
+          const hls = new Hls({ enableWorker: true })
+          hlsRef.current = hls
+          await new Promise((resolve) => {
+            hls.on(Hls.Events.MANIFEST_PARSED, resolve)
+            hls.on(Hls.Events.ERROR, (_event, info) => {
+              if (info?.fatal) {
+                setError('This full track could not be streamed.')
+                resolve()
+              }
+            })
+            hls.loadSource(data.url)
+            hls.attachMedia(audio)
+          })
+        } else {
+          // Safari plays HLS natively.
+          audio.src = data.url
+        }
+      } else {
+        // Mixed content would be blocked outright on the https deployment.
+        audio.src = String(entry.previewUrl).replace(/^http:\/\//i, 'https://')
+      }
+      // load() would tear down the media source HLS just attached; only the plain
+      // file path needs it.
+      if (!entry.hlsUrl) audio.load()
       audio.currentTime = 0
-      audio.load()
       setCurrent(entry)
       // Real, device-local play history: the feed and Recently Played read this.
       recordPlay?.(entry)
@@ -160,10 +195,14 @@ export function PlayerProvider({ children }) {
       // '' resolves to the page URL and fires a bogus media error; drop the attribute.
       audio.removeAttribute('src')
       audio.load()
+      if (hlsRef.current) {
+        hlsRef.current.destroy()
+        hlsRef.current = null
+      }
     }
   }, [])
 
-  const playable = (track) => Boolean(track?.previewUrl)
+  const playable = (track) => Boolean(track?.previewUrl || track?.hlsUrl)
 
   /** Play a whole list, starting at one entry — the artist page, playlists, charts. */
   const playQueue = useCallback(
@@ -353,6 +392,10 @@ export function PlayerProvider({ children }) {
       audio.pause()
       audio.removeAttribute('src')
       audio.load()
+      if (hlsRef.current) {
+        hlsRef.current.destroy()
+        hlsRef.current = null
+      }
     }
     queueRef.current = []
     indexRef.current = -1

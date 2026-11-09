@@ -116,6 +116,10 @@ export const api = {
   track: (id) => request(`/api/music/track?id=${encodeURIComponent(id)}`),
   artists: (q) => request(`/api/music/artists?q=${encodeURIComponent(q)}`),
   suggest: (q) => request(`/api/search/suggest?q=${encodeURIComponent(q)}`),
+  providers: () => request('/api/providers'),
+  epidemicSearch: (q, limit = 8) =>
+    request(`/api/music/epidemic?action=search&q=${encodeURIComponent(q)}&limit=${limit}`),
+  epidemicFeatured: (limit = 10) => request(`/api/music/epidemic?action=featured&limit=${limit}`),
   artistSongs: (artistId, limit = 50) =>
     request(`/api/music/artist?artistId=${encodeURIComponent(artistId)}&limit=${limit}`),
   albums: (artistId) => request(`/api/music/albums?artistId=${encodeURIComponent(artistId)}`),

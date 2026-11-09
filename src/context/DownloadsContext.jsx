@@ -16,7 +16,8 @@ function formatFromName(name) {
 
 function safeName(track) {
   const base = `${track.artist || 'Unknown'} - ${track.title || 'Track'}`.replace(/[\\/:*?"<>|]/g, ' ').trim()
-  return `${base.slice(0, 90) || 'jimmy-state-track'}.m4a`
+  const ext = track?.full ? 'mp3' : 'm4a'
+  return `${base.slice(0, 90) || 'jimmy-state-track'}.${ext}`
 }
 
 export function DownloadsProvider({ children }) {
@@ -57,7 +58,11 @@ export function DownloadsProvider({ children }) {
         return mergeDownload(recordRef.current, persist)
       }
 
-      if (!track?.previewUrl) {
+      // Full-length provider tracks expose their own same-origin endpoint; there is no
+      // preview URL to resolve, and the file is streamed straight from it.
+      const direct = typeof track?.downloadUrl === 'string' && track.downloadUrl.startsWith('/api/')
+
+      if (!track?.previewUrl && !direct) {
         patch(
           {
             status: 'failed',
@@ -72,7 +77,16 @@ export function DownloadsProvider({ children }) {
 
       try {
         patch({ status: 'resolving', percent: 0, received: 0, error: null })
-        const resolved = await resolveSource(track.previewUrl, recordRef.current.fileName || safeName(track))
+        const fileName = recordRef.current.fileName || safeName(track)
+        const resolved = direct
+          ? {
+              fileName,
+              format: 'mp3',
+              size: 0,
+              contentType: 'audio/mpeg',
+              streamUrl: `${track.downloadUrl}&name=${encodeURIComponent(fileName)}`,
+            }
+          : await resolveSource(track.previewUrl, fileName)
         if (controller.signal.aborted) throw Object.assign(new Error('cancelled'), { code: 'ABORTED' })
 
         patch({

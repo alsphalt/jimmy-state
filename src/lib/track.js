@@ -28,6 +28,11 @@ export function normalizeTrack(raw) {
     artwork: raw.artwork || raw.artworkSmall || '',
     artworkSmall: raw.artworkSmall || raw.artwork || '',
     previewUrl: raw.previewUrl || '',
+    // Full-length provider tracks: HLS for playback, a metered endpoint for saving.
+    hlsUrl: raw.hlsUrl || '',
+    downloadUrl: raw.downloadUrl || '',
+    full: Boolean(raw.full),
+    previewOnly: Boolean(raw.previewOnly),
     storeUrl: raw.storeUrl || '',
     durationMs: Number(raw.durationMs || 0),
     genre: raw.genre || '',
@@ -61,6 +66,11 @@ export function normalizeVideo(raw) {
     embeddable: raw.embeddable !== false,
     watchUrl: raw.watchUrl || `https://www.youtube.com/watch?v=${raw.videoId}`,
     previewUrl: raw.previewUrl || '',
+    // Full-length provider tracks: HLS for playback, a metered endpoint for saving.
+    hlsUrl: raw.hlsUrl || '',
+    downloadUrl: raw.downloadUrl || '',
+    full: Boolean(raw.full),
+    previewOnly: Boolean(raw.previewOnly),
     storeUrl: raw.storeUrl || '',
     kind: raw.kind || 'youtube',
     genre: raw.genre || '',

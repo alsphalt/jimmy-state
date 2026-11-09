@@ -37,7 +37,7 @@ import { trackKey } from '../lib/track.js'
 
 const PAGE = 20
 
-const previewOf = (track) => Boolean(track?.previewUrl)
+const previewOf = (track) => Boolean(track?.previewUrl || track?.hlsUrl)
 
 const releaseLabel = (iso) => {
   if (!iso) return ''
@@ -59,6 +59,7 @@ export default function Home() {
   const [term, setTerm] = useState('')
   const [feed, setFeed] = useState({ items: [], loading: true, error: null, hasMore: true, loaded: 0 })
   const [charts, setCharts] = useState({ loading: true, items: [], error: null })
+  const [fullTracks, setFullTracks] = useState([])
   const [recommended, setRecommended] = useState(null)
   const [sheet, setSheet] = useState(null)
   const [playlistFor, setPlaylistFor] = useState(null)
@@ -67,6 +68,24 @@ export default function Home() {
   const hasMoreRef = useRef(true)
   const loadingRef = useRef(false)
   const seenRef = useRef(new Set())
+
+  // Full-length tracks come from the licensed provider, and only when it is
+  // configured — otherwise the rail is absent rather than empty.
+  useEffect(() => {
+    let alive = true
+    api
+      .providers()
+      .then((data) => {
+        if (!alive || !data?.providers?.epidemic?.configured) return null
+        return api.epidemicFeatured(10).then((res) => {
+          if (alive) setFullTracks(res.items || [])
+        })
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
 
   const loadMore = useCallback(async () => {
     if (loadingRef.current || !hasMoreRef.current) return
@@ -95,6 +114,23 @@ export default function Home() {
   useEffect(() => {
     loadMore()
   }, [loadMore])
+
+  // Full-length tracks come from the licensed provider and only appear when it is
+  // configured; nothing is shown, and no empty rail, when the key is absent.
+  useEffect(() => {
+    let alive = true
+    api.providers()
+      .then((data) => {
+        if (!alive || !data?.providers?.epidemic?.configured) return null
+        return api.epidemicFeatured(10).then((res) => {
+          if (alive) setFullTracks(res.items || [])
+        })
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
 
   useEffect(() => {
     let alive = true
@@ -250,6 +286,38 @@ export default function Home() {
               <span className="rail-title truncate">{sub.name}</span>
               <span className="rail-sub truncate">Subscribed</span>
             </Link>
+          ))}
+        </Rail>
+      )}
+
+      {fullTracks.length > 0 && (
+        <Rail
+          title="Full tracks · Epidemic Sound"
+          count={fullTracks.length}
+          action="Full-length"
+          to="/search?mode=videos"
+        >
+          {fullTracks.map((track, index) => (
+            <div className="rail-tile-wrap" key={track.id || track.trackId || index}>
+              <button type="button" className="rail-tile" onClick={() => playItem(fullTracks, track)}>
+                <span className="rail-art">
+                  <Artwork src={track.artworkSmall || track.artwork} alt="" />
+                  <span className="rail-rank rail-rank-full">FULL</span>
+                </span>
+                <span className="rail-title truncate">{track.title}</span>
+                <span className="rail-sub truncate">{track.artist}</span>
+              </button>
+              <button
+                type="button"
+                className="rail-dl"
+                aria-label={`Download ${track.title}`}
+                title="Download the full track (MP3)"
+                disabled={downloads.isDownloading?.(trackKey(track))}
+                onClick={() => downloads.start(track)}
+              >
+                <IconDownload size={14} />
+              </button>
+            </div>
           ))}
         </Rail>
       )}
@@ -493,6 +561,7 @@ function FeedCard({
               <button type="button" className="feed-artist truncate" onClick={onArtist}>
                 {track.artist}
               </button>
+              {track.full ? <span className="feed-badge">FULL</span> : null}
               <span aria-hidden="true">·</span>
               <time dateTime={track.releaseDate} title={track.releaseDate || ''}>
                 {releaseLabel(track.releaseDate)}
