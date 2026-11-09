@@ -118,7 +118,8 @@ export const api = {
   artistSongs: (artistId, limit = 50) =>
     request(`/api/music/artist?artistId=${encodeURIComponent(artistId)}&limit=${limit}`),
   albums: (artistId) => request(`/api/music/albums?artistId=${encodeURIComponent(artistId)}`),
-  charts: (limit = 20) => request(`/api/music/charts?limit=${limit}`),
+  charts: (limit = 20, country = 'us') =>
+    request(`/api/music/charts?limit=${limit}&country=${encodeURIComponent(country)}`),
   feed: (before = '', limit = 20) =>
     request(`/api/feed?limit=${limit}${before ? `&before=${encodeURIComponent(before)}` : ''}`),
 

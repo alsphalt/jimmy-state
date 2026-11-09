@@ -224,7 +224,7 @@ function UpdateCard() {
           {state.status === 'checking' ? t('update.checking') : t('update.check')}
         </button>
 
-        {state.status === 'available' && manifest?.apkUrl && (
+        {state.status === 'available' && manifest && (
           <button type="button" className="btn btn-primary btn-sm" onClick={install}>
             <IconDownload size={15} /> {t('update.install')}
           </button>

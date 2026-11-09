@@ -256,13 +256,19 @@ export async function checkForUpdate({ ignoreDismissed = false, signal } = {}) {
  * never asks the user to sign in again or re-import anything.
  */
 export async function installUpdate(manifest, { onProgress, signal } = {}) {
-  if (!manifest?.apkUrl) {
+  if (!manifest?.version) {
     throw Object.assign(new Error('No build has been published yet.'), { code: 'NO_BUILD_PUBLISHED' })
   }
 
   if (!IS_NATIVE_APP) {
-    openExternal(manifest.apkUrl)
-    return { method: 'browser' }
+    const registration = await navigator.serviceWorker?.getRegistration?.()
+    registration?.waiting?.postMessage('SKIP_WAITING')
+    window.location.reload()
+    return { method: 'reload' }
+  }
+
+  if (!manifest.apkUrl) {
+    throw Object.assign(new Error('No Android build has been published yet.'), { code: 'NO_BUILD_PUBLISHED' })
   }
 
   if (!(await canInstallApk())) {

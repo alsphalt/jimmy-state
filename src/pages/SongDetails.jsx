@@ -18,6 +18,7 @@ import {
   IconShield,
 } from '../components/Icons.jsx'
 import { useLibrary } from '../context/LibraryContext.jsx'
+import { useDownloads } from '../context/DownloadsContext.jsx'
 import { api } from '../lib/api.js'
 import { formatDate, formatDuration, timeAgo } from '../lib/format.js'
 import { trackKey } from '../lib/track.js'
@@ -27,6 +28,7 @@ export default function SongDetails() {
   const { key } = useParams()
   const location = useLocation()
   const { favourites, identifications, playlists, addToPlaylist, createPlaylist } = useLibrary()
+  const { downloads } = useDownloads()
   const [newName, setNewName] = useState('')
   const [added, setAdded] = useState('')
   const [meta, setMeta] = useState({ links: [], credits: [], label: '', loading: false })
@@ -86,6 +88,8 @@ export default function SongDetails() {
 
   const links = knownLinks.length ? knownLinks : meta.links
   const credits = a.track?.credits?.length ? a.track.credits : meta.credits
+  const latestDownload = downloads.find((item) => item.track?.key === a.track?.key)
+  const downloadActive = ['queued', 'resolving', 'downloading', 'saving'].includes(latestDownload?.status)
 
   if (!track) {
     return (
@@ -196,9 +200,21 @@ export default function SongDetails() {
         >
           <IconPlay size={16} /> {resolving ? 'Finding…' : 'Play full'}
         </button>
-        <button type="button" className="btn" onClick={a.download} disabled={!a.track.previewUrl}>
-          <IconDownload size={16} /> Download preview
+        <button
+          type="button"
+          className="btn"
+          onClick={a.download}
+          disabled={!a.track.previewUrl || downloadActive}
+          title={a.track.previewUrl ? 'Save the provider-published preview to your device' : 'This song has no authorized download source'}
+        >
+          <IconDownload size={16} />
+          {downloadActive ? 'Downloading…' : a.track.previewUrl ? 'Download authorized preview' : 'Download unavailable'}
         </button>
+        {latestDownload?.status === 'completed' && (
+          <Link to="/downloads" className="btn btn-ghost">
+            View download
+          </Link>
+        )}
         <button type="button" className="btn btn-ghost" onClick={a.favourite} aria-pressed={a.saved}>
           <IconHeart size={16} filled={a.saved} /> {a.saved ? 'Saved' : 'Save'}
         </button>

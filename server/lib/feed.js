@@ -23,6 +23,9 @@ import { searchMusic } from './itunes.js'
 /** Real searches, each returning distinct catalogue songs. Order is deliberate. */
 const TERMS = [
   'new music 2026',
+  'Kenya new music',
+  'Tanzania new music',
+  'East African hits',
   'afrobeats',
   'amapiano',
   'pop hits',
