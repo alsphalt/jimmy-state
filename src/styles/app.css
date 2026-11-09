@@ -2846,3 +2846,8 @@ body.drawer-open {
   cursor: pointer;
 }
 .rail-dl:disabled { opacity: 0.5; cursor: default; }
+
+/* While a catalogue track is being mapped to its full upload, the play badge dims
+   instead of looking unresponsive. */
+.tile-play.is-busy { opacity: 0.5; animation: tile-pulse 1s ease-in-out infinite; }
+@keyframes tile-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.94); } }
